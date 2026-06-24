@@ -26,6 +26,18 @@ libadwaita.
 Planned next: tags, checklists, project headings, repeating to-dos, reminders,
 drag-and-drop reordering, and a global Quick Entry hotkey.
 
+## Keyboard shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+N` | New to-do (in the current list) |
+| `Ctrl+F` | Quick Find |
+| `Ctrl+R` | Sync now |
+| `Ctrl+1`…`Ctrl+7` | Jump to Inbox / Today / Upcoming / Anytime / Someday / Logbook / Trash |
+| `Ctrl+W` | Close window · `F1` About |
+
+A primary menu (☰) in the header exposes New To-Do, Quick Find, Sync Now and About.
+
 ## How it works
 
 ```

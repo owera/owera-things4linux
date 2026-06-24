@@ -6,9 +6,9 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, GLib, Gtk  # noqa: E402
+from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
-from .. import config, views  # noqa: E402
+from .. import __version__, config, views  # noqa: E402
 from ..db import models  # noqa: E402
 from ..db.models import Task  # noqa: E402
 from ..db.store import Store  # noqa: E402
@@ -66,6 +66,16 @@ class MainWindow(Adw.ApplicationWindow):
         refresh_btn = Gtk.Button(icon_name="view-refresh-symbolic", tooltip_text="Sync now")
         refresh_btn.connect("clicked", lambda *_: self.engine.trigger())
         header.pack_end(refresh_btn)
+
+        menu = Gio.Menu()
+        menu.append("New To-Do", "win.new-todo")
+        menu.append("Quick Find", "win.search")
+        menu.append("Sync Now", "win.sync")
+        menu.append("About Things4Linux", "win.about")
+        menu_btn = Gtk.MenuButton(
+            icon_name="open-menu-symbolic", menu_model=menu, tooltip_text="Main Menu"
+        )
+        header.pack_end(menu_btn)
         self.empty_btn = Gtk.Button(label="Empty Trash")
         self.empty_btn.add_css_class("destructive-action")
         self.empty_btn.set_visible(False)
@@ -111,7 +121,51 @@ class MainWindow(Adw.ApplicationWindow):
         sidebar_tv.set_content(self.sidebar)
         self.split.set_sidebar(Adw.NavigationPage(title=config.APP_NAME, child=sidebar_tv))
 
+        self._install_actions()
         self.refresh()
+
+    # -- actions / keyboard shortcuts -------------------------------------------------
+    def _install_actions(self) -> None:
+        app = self.get_application()
+        simple = [
+            ("new-todo", lambda *_: self.add_task(), ["<Ctrl>n"]),
+            ("search", lambda *_: self._toggle_search(), ["<Ctrl>f"]),
+            ("sync", lambda *_: self.engine.trigger(), ["<Ctrl>r"]),
+            ("about", self._on_about, ["F1"]),
+        ]
+        for name, cb, accels in simple:
+            action = Gio.SimpleAction.new(name, None)
+            action.connect("activate", cb)
+            self.add_action(action)
+            if app:
+                app.set_accels_for_action(f"win.{name}", accels)
+
+        goto = Gio.SimpleAction.new("goto", GLib.VariantType.new("s"))
+        goto.connect("activate", self._on_goto)
+        self.add_action(goto)
+        builtins = ["inbox", "today", "upcoming", "anytime", "someday", "logbook", "trash"]
+        if app:
+            for i, view in enumerate(builtins, start=1):
+                app.set_accels_for_action(f"win.goto::{view}", [f"<Ctrl>{i}"])
+            app.set_accels_for_action("window.close", ["<Ctrl>w"])
+
+    def _toggle_search(self) -> None:
+        self.search_btn.set_active(not self.search_bar.get_search_mode())
+
+    def _on_goto(self, _action, param: GLib.Variant) -> None:
+        self.sidebar.select_view("builtin", param.get_string())
+
+    def _on_about(self, *_args) -> None:
+        about = Adw.AboutDialog(
+            application_name=config.APP_NAME,
+            application_icon=config.APPLICATION_ID,
+            version=__version__,
+            developer_name="Things4Linux contributors",
+            comments="A Things 3 clone for Linux that syncs with Things Cloud.",
+            license_type=Gtk.License.MIT_X11,
+            website="https://github.com/things4linux/things4linux",
+        )
+        about.present(self)
 
     # -- selection / refresh ----------------------------------------------------------
     def _on_select(self, kind: str, ref: str) -> None:

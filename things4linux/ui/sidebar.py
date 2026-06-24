@@ -126,6 +126,10 @@ class Sidebar(Gtk.ScrolledWindow):
         # restore selection
         self._reselect(sel_key)
 
+    def select_view(self, kind: str, ref: str) -> None:
+        """Programmatically select a row (e.g. from a keyboard shortcut)."""
+        self._reselect((kind, ref))
+
     def _reselect(self, key: tuple[str, str]) -> None:
         row = self.listbox.get_first_child()
         while row is not None:
