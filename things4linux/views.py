@@ -12,6 +12,23 @@ from typing import Iterable
 from .db.models import Task
 
 
+def normalize_query(query: str) -> list[str]:
+    """Lower-cased search terms; every term must match (AND semantics)."""
+    return [w for w in query.lower().split() if w]
+
+
+def match_task(task: Task, terms: list[str]) -> bool:
+    haystack = f"{task.title}\n{task.notes}".lower()
+    return all(term in haystack for term in terms)
+
+
+def search_rank(task: Task, terms: list[str]):
+    """Sort key for search results: title matches first, open before done."""
+    title = task.title.lower()
+    in_title = all(term in title for term in terms)
+    return (0 if in_title else 1, 0 if task.status == 0 else 1, title)
+
+
 def split_today(tasks: Iterable[Task]) -> tuple[list[Task], list[Task]]:
     """Return (daytime, evening) for the Today view."""
     day, evening = [], []

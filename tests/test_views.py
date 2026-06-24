@@ -51,5 +51,27 @@ class ViewsTest(unittest.TestCase):
         self.assertEqual([t.uuid for t in groups[1][1]], ["c"])
 
 
+class SearchMatchTest(unittest.TestCase):
+    def test_normalize_and_match_all_terms(self):
+        terms = views.normalize_query("  Buy   Milk ")
+        self.assertEqual(terms, ["buy", "milk"])
+        t = Task(uuid="x", title="Buy oat milk", notes="from the shop")
+        self.assertTrue(views.match_task(t, terms))
+        self.assertFalse(views.match_task(t, views.normalize_query("buy bread")))
+
+    def test_match_searches_notes(self):
+        t = Task(uuid="x", title="Call", notes="ring the dentist")
+        self.assertTrue(views.match_task(t, views.normalize_query("dentist")))
+
+    def test_rank_prefers_title_then_open(self):
+        title_hit = Task(uuid="a", title="dentist appt")
+        notes_hit = Task(uuid="b", title="call", notes="dentist")
+        done_title = Task(uuid="c", title="dentist done", status=3)
+        terms = views.normalize_query("dentist")
+        ranked = sorted([notes_hit, done_title, title_hit],
+                        key=lambda t: views.search_rank(t, terms))
+        self.assertEqual([t.uuid for t in ranked], ["a", "c", "b"])
+
+
 if __name__ == "__main__":
     unittest.main()

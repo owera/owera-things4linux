@@ -58,6 +58,11 @@ class MainWindow(Adw.ApplicationWindow):
         self.add_btn = Gtk.Button(icon_name="list-add-symbolic", tooltip_text="New To-Do")
         self.add_btn.connect("clicked", lambda *_: self.add_task())
         header.pack_start(self.add_btn)
+        self.search_btn = Gtk.ToggleButton(
+            icon_name="system-search-symbolic", tooltip_text="Quick Find (Ctrl+F)"
+        )
+        self.search_btn.connect("toggled", self._on_search_toggled)
+        header.pack_start(self.search_btn)
         refresh_btn = Gtk.Button(icon_name="view-refresh-symbolic", tooltip_text="Sync now")
         refresh_btn.connect("clicked", lambda *_: self.engine.trigger())
         header.pack_end(refresh_btn)
@@ -67,6 +72,16 @@ class MainWindow(Adw.ApplicationWindow):
         self.empty_btn.connect("clicked", lambda *_: self._confirm_empty_trash())
         header.pack_end(self.empty_btn)
         content_tv.add_top_bar(header)
+
+        # Quick Find search bar (revealed by the toggle button or Ctrl+F / typing)
+        self.search_bar = Gtk.SearchBar()
+        self.search_entry = Gtk.SearchEntry(hexpand=True, placeholder_text="Quick Find")
+        self.search_bar.set_child(self.search_entry)
+        self.search_bar.connect_entry(self.search_entry)
+        self.search_bar.set_key_capture_widget(self)
+        self.search_bar.connect("notify::search-mode-enabled", self._on_search_mode)
+        self.search_entry.connect("search-changed", lambda *_: self.refresh_content())
+        content_tv.add_top_bar(self.search_bar)
 
         self.banner = Adw.Banner()
         self.banner.set_revealed(False)
@@ -131,6 +146,15 @@ class MainWindow(Adw.ApplicationWindow):
         self.refresh_content()
 
     def refresh_content(self) -> None:
+        query = (
+            self.search_entry.get_text().strip()
+            if self.search_bar.get_search_mode()
+            else ""
+        )
+        if query:
+            self._populate_search(query)
+            return
+
         title = self._current_title()
         self.title_label.set_text(title)
         # add button only makes sense in actionable lists
@@ -170,6 +194,28 @@ class MainWindow(Adw.ApplicationWindow):
             self.listbox.append(SectionRow(header))
             for task in group:
                 self._append_task(task)
+
+    def _populate_search(self, query: str) -> None:
+        self.title_label.set_text("Quick Find")
+        self.add_btn.set_visible(False)
+        self.empty_btn.set_visible(False)
+        self._clear_list()
+        self._tag_map = self.store.tag_map()
+        for task in self.store.search(query):
+            self._append_task(task)
+
+    # -- search controls --------------------------------------------------------------
+    def _on_search_toggled(self, btn: Gtk.ToggleButton) -> None:
+        self.search_bar.set_search_mode(btn.get_active())
+        if btn.get_active():
+            self.search_entry.grab_focus()
+
+    def _on_search_mode(self, bar: Gtk.SearchBar, _param) -> None:
+        active = bar.get_search_mode()
+        self.search_btn.set_active(active)
+        if not active:
+            self.search_entry.set_text("")
+        self.refresh_content()
 
     def _clear_list(self) -> None:
         child = self.listbox.get_first_child()

@@ -19,7 +19,7 @@ import time
 from pathlib import Path
 from typing import Any, Iterable
 
-from .. import config
+from .. import config, views
 from . import models
 from .models import Area, Tag, Task
 
@@ -428,6 +428,19 @@ class Store:
     def get_task(self, uuid: str) -> Task | None:
         rows = self._tasks("uuid = ?", (uuid,))
         return rows[0] if rows else None
+
+    def search(self, query: str) -> list[Task]:
+        """Quick Find: all non-trashed to-dos/projects matching every term."""
+        terms = views.normalize_query(query)
+        if not terms:
+            return []
+        with self._lock:
+            rows = self._conn.execute("SELECT * FROM task WHERE trashed = 0").fetchall()
+            tasks = [_row_to_task(r) for r in rows]
+            self._attach_tags(tasks)
+        matches = [t for t in tasks if views.match_task(t, terms)]
+        matches.sort(key=lambda t: views.search_rank(t, terms))
+        return matches
 
     def counts(self) -> dict[str, int]:
         """Badge counts for the sidebar built-in views."""

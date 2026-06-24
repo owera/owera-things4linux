@@ -54,6 +54,21 @@ class StoreTest(unittest.TestCase):
         self._add(title="step 1", project=proj.uuid, destination=models.DEST_ANYTIME)
         self.assertEqual([t.title for t in self.store.project_tasks(proj.uuid)], ["step 1"])
 
+    def test_search(self):
+        self._add(title="Buy oat milk")
+        self._add(title="Call dentist", notes="ask about the appointment")
+        self._add(title="Buy bread")
+        trashed = self._add(title="Buy milk old")
+        self.store.trash_task(trashed.uuid)
+        # term in title
+        self.assertEqual([t.title for t in self.store.search("dentist")], ["Call dentist"])
+        # term in notes
+        self.assertEqual([t.title for t in self.store.search("appointment")], ["Call dentist"])
+        # AND across terms, trashed excluded
+        self.assertEqual([t.title for t in self.store.search("buy milk")], ["Buy oat milk"])
+        # empty query -> nothing
+        self.assertEqual(self.store.search("   "), [])
+
     def test_apply_remote_does_not_queue(self):
         uuid = config.new_id()
         self.store.apply_remote("task", uuid, 0, {"title": "remote", "destination": 2})
