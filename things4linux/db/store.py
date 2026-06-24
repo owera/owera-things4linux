@@ -85,6 +85,27 @@ class Store:
             )
             self._conn.commit()
 
+    # -- key/value meta ---------------------------------------------------------------
+    def set_meta(self, key: str, value: str) -> None:
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO app_meta (key, value) VALUES (?, ?) "
+                "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                (key, value),
+            )
+            self._conn.commit()
+
+    def get_meta(self, key: str, default: str | None = None) -> str | None:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT value FROM app_meta WHERE key = ?", (key,)
+            ).fetchone()
+            return row["value"] if row else default
+
+    def write_entity(self, family: str, default: str) -> str:
+        """The entity kind to write for ``family`` (learned from history)."""
+        return self.get_meta(f"entity_{family}", default) or default
+
     # -- generic upsert ---------------------------------------------------------------
     def _upsert(self, table: str, uuid: str, fields: dict[str, Any], columns: Iterable[str]) -> None:
         cols = [c for c in columns if c in fields]

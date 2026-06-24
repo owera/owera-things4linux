@@ -40,6 +40,25 @@ GTK UI  ⇄  db.store (SQLite, source of truth)  ⇄  sync.engine  ⇄  Things C
 - `things4linux/sync/engine.py` — background pull/push loop reconciled through a
   monotonic history index.
 
+### Protocol notes (verified against a live account)
+
+- **Auth:** `GET /version/1/account/{email}` with header
+  `Authorization: Password <url-quoted-password>` (the password is *not* wrapped
+  in quotes). Returns the `history-key`.
+- **Read:** `GET /version/1/history/{key}/items?start-index=N`. A pull from `0`
+  returns a *compacted base snapshot*; you receive newer writes by pulling
+  **incrementally from your last head** (`current-item-index`). The engine keeps a
+  persistent head and always pulls forward, so a synced client reliably sees all
+  remote changes.
+- **Write:** `POST /version/1/history/{key}/commit?ancestor-index=H` where `H` is
+  your current head. A **create must send the *complete* object** — a partial
+  `NewBody` is silently orphaned by the server; edits send only changed fields.
+- **Entity generations:** Things tags entities with a generation number
+  (`Task`/`Task2`/`Task6`, `Tag`/`Tag2`/`Tag3`, `Area`/`Area2`) that varies by
+  account/app version. We classify by stripping the trailing digits, and **learn
+  which generation to write** from your own history so the official apps accept
+  our writes.
+
 ## Requirements
 
 System packages (the GTK stack is **not** installed from pip):

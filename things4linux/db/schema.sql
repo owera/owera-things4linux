@@ -66,6 +66,13 @@ CREATE TABLE IF NOT EXISTS sync_state (
 );
 INSERT OR IGNORE INTO sync_state (id, history_key, head_index) VALUES (1, NULL, 0);
 
+-- Small key/value store: e.g. the entity generation (Task2 vs Task6) this
+-- account's app uses, learned from the history so our writes match.
+CREATE TABLE IF NOT EXISTS app_meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT
+);
+
 -- Locally-originated changes awaiting a /commit. ``fields`` is a JSON dict of the
 -- changed internal field names -> values; the engine encodes it via serde.
 CREATE TABLE IF NOT EXISTS change_queue (

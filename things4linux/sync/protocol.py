@@ -95,9 +95,9 @@ class ThingsClient:
 
     def login(self, email: str, password: str) -> Account:
         """Verify credentials and fetch the account's ``history-key``."""
-        # Password is sent URL-quoted and wrapped in single quotes, matching the
-        # macOS client. ``safe="'"`` keeps the wrapping quotes un-escaped.
-        auth = "Password " + quote(f"'{password}'", safe="'")
+        # Auth scheme is ``Password <url-quoted-password>``. ``safe="'"`` leaves a
+        # literal single quote in the password un-escaped (matches the macOS client).
+        auth = "Password " + quote(password, safe="'")
         url = f"/version/1/account/{quote(email)}"
         resp = self._request("GET", url, headers={"Authorization": auth})
         data = resp.json()

@@ -27,11 +27,30 @@ class SerdeTest(unittest.TestCase):
         self.assertEqual(back["project"], "PROJ123")
         self.assertEqual(back["notes"], "2%")
 
-    def test_full_create_has_defaults(self):
+    def test_full_create_is_complete(self):
+        # A create must be a COMPLETE TodoApiObject; the server orphans a commit
+        # whose NewBody is missing fields. Pin the full required key set.
         payload = serde.encode_task({"title": "X"}, partial=False)
-        for key in ("ss", "st", "tp", "ix", "tr", "ar", "pr", "tg", "nt"):
-            self.assertIn(key, payload)
+        required = {
+            "ix", "tt", "ss", "st", "cd", "md", "sr", "tir", "sp", "dd", "tr",
+            "icp", "pr", "ar", "sb", "tg", "tp", "dds", "rt", "rmd", "dl", "do",
+            "lai", "agr", "lt", "icc", "ti", "ato", "icsd", "rp", "acrd", "rr",
+            "nt", "xx",
+        }
+        self.assertEqual(required - set(payload), set(), "missing create fields")
         self.assertEqual(payload["ss"], int(serde.Status.TODO))
+        self.assertIsInstance(payload["cd"], float)
+        self.assertEqual(payload["xx"], {"sn": {}, "_t": "oo"})
+
+    def test_classify_handles_entity_generations(self):
+        for ent in ("Task", "Task2", "Task6"):
+            self.assertEqual(serde.classify(ent), "task")
+        for ent in ("Tag", "Tag2", "Tag3"):
+            self.assertEqual(serde.classify(ent), "tag")
+        for ent in ("Area", "Area2"):
+            self.assertEqual(serde.classify(ent), "area")
+        self.assertEqual(serde.classify("Settings2"), "other")
+        self.assertEqual(serde.classify("Contact"), "other")
 
     def test_edit_sends_only_present_fields(self):
         payload = serde.encode_task({"status": serde.Status.COMPLETED}, partial=True)

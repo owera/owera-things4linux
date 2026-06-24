@@ -17,6 +17,7 @@ payload (for creates) or a partial one (for edits — only changed fields).
 
 from __future__ import annotations
 
+import time
 from enum import IntEnum
 from typing import Any
 
@@ -104,6 +105,10 @@ def _encode_note(text: str) -> dict[str, Any]:
     return {"_t": "tx", "v": text or "", "ch": 0, "t": 1}
 
 
+def _encode_xx() -> dict[str, Any]:
+    return {"sn": {}, "_t": "oo"}
+
+
 def _first(value: Any) -> str | None:
     if isinstance(value, list):
         return value[0] if value else None
@@ -154,19 +159,21 @@ def encode_task(model: dict[str, Any], *, partial: bool) -> dict[str, Any]:
             p["tg"] = list(value) if value else []
 
     if not partial:
-        # Structural defaults the macOS client always sends on create.
-        p.setdefault("tt", "")
-        p.setdefault("ss", int(Status.TODO))
-        p.setdefault("st", int(Destination.INBOX))
-        p.setdefault("tp", int(ItemType.TASK))
-        p.setdefault("ix", 0)
-        p.setdefault("tr", False)
-        p.setdefault("pr", [])
-        p.setdefault("ar", [])
-        p.setdefault("agr", [])
-        p.setdefault("tg", [])
-        p.setdefault("sb", 0)
-        p.setdefault("nt", _encode_note(""))
+        # A create must be a COMPLETE TodoApiObject — the server orphans a commit
+        # whose NewBody is missing fields. Defaults below mirror a fresh native
+        # to-do (field set verified against the reference schema + live payloads).
+        now = p.get("md") or p.get("cd") or time.time()
+        defaults: dict[str, Any] = {
+            "ix": 0, "tt": "", "ss": int(Status.TODO), "st": int(Destination.INBOX),
+            "cd": now, "md": now, "sr": None, "tir": None, "sp": None, "dd": None,
+            "tr": False, "icp": False, "pr": [], "ar": [], "sb": 0, "tg": [],
+            "tp": int(ItemType.TASK), "dds": None, "rt": [], "rmd": None, "dl": [],
+            "do": 0, "lai": None, "agr": [], "lt": False, "icc": 0, "ti": 0,
+            "ato": None, "icsd": None, "rp": None, "acrd": None, "rr": None,
+            "nt": _encode_note(""), "xx": _encode_xx(),
+        }
+        for key, value in defaults.items():
+            p.setdefault(key, value)
     return p
 
 
@@ -194,17 +201,17 @@ def encode_simple(model: dict[str, Any], inv: dict[str, str]) -> dict[str, Any]:
 # --- envelope helpers ----------------------------------------------------------------
 
 
+# Things bumps the trailing generation number over time (Task -> Task2 -> Task6,
+# Tag -> Tag2 -> Tag3, Area -> Area2, ...). Different accounts/app versions sit on
+# different generations, so we classify by the name with its trailing digits
+# stripped — recognising every generation rather than an explicit allow-list.
+_FAMILY = {"Task": "task", "Area": "area", "Tag": "tag", "ChecklistItem": "checklist"}
+
+
 def classify(entity: str) -> str:
     """Return a coarse category for an entity kind: task/area/tag/checklist/other."""
-    if entity in TASK_KINDS:
-        return "task"
-    if entity in AREA_KINDS:
-        return "area"
-    if entity in TAG_KINDS:
-        return "tag"
-    if entity in CHECKLIST_KINDS:
-        return "checklist"
-    return "other"
+    base = (entity or "").rstrip("0123456789")
+    return _FAMILY.get(base, "other")
 
 
 def decode_item(entity: str, payload: dict[str, Any]) -> dict[str, Any]:

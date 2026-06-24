@@ -53,6 +53,8 @@ class SyncEngine:
         self._wake = threading.Event()
         self._thread: threading.Thread | None = None
         self._history_key = store.get_history_key()
+        # most-recent entity kind seen per family, learned while pulling
+        self._latest_entity: dict[str, str] = {}
 
     # -- setup ------------------------------------------------------------------------
     def configure(self, email: str, password: str) -> str:
@@ -135,6 +137,8 @@ class SyncEngine:
             self.store.set_head_index(sl.end_index)
             if sl.end_index <= head:  # safety against non-advancing server
                 break
+        if applied:
+            self._persist_learned_entities()
         return applied
 
     def _apply_entry(self, entry: dict[str, Any]) -> None:
@@ -143,8 +147,14 @@ class SyncEngine:
             kind = serde.classify(entity)
             if kind == "other":
                 continue
+            # processed in history order, so the last seen is the most recent.
+            self._latest_entity[kind] = entity
             decoded = serde.decode_item(entity, env.get("p", {}))
             self.store.apply_remote(kind, uuid, int(env.get("t", 1)), decoded)
+
+    def _persist_learned_entities(self) -> None:
+        for family, entity in self._latest_entity.items():
+            self.store.set_meta(f"entity_{family}", entity)
 
     # -- push -------------------------------------------------------------------------
     def push(self) -> bool:
@@ -170,12 +180,12 @@ class SyncEngine:
         self.store.clear_changes(seqs, uuids)
         return True
 
-    @staticmethod
-    def _encode(item: dict[str, Any]) -> dict[str, Any]:
+    def _encode(self, item: dict[str, Any]) -> dict[str, Any]:
         kind = item["kind"]
         op = item["op"]
         fields = item["fields"]
-        entity = _WRITE_ENTITY.get(kind, serde.TASK_KIND)
+        default = _WRITE_ENTITY.get(kind, serde.TASK_KIND)
+        entity = self.store.write_entity(kind, default)
         if kind == "task":
             payload = serde.encode_task(fields, partial=(op != 0))
         elif kind == "area":

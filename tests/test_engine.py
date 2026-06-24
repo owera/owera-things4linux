@@ -75,6 +75,21 @@ class EngineTest(unittest.TestCase):
         self.assertEqual(titles, ["mine", "other device"])
         self.assertEqual(len(self.cloud.history), 2)
 
+    def test_write_entity_is_learned_from_history(self):
+        # Server history uses the older "Task2" generation.
+        self.cloud.server_push(
+            config.new_id(), "Task2", 0,
+            serde.encode_task({"title": "legacy"}, partial=False),
+        )
+        self.engine.pull()
+        self.assertEqual(self.store.write_entity("task", serde.TASK_KIND), "Task2")
+        # A local create should now be written as Task2, matching the account.
+        t = Task(uuid=config.new_id(), title="mine")
+        self.store.add_task(t)
+        self.engine.push()
+        env = self.cloud.history[-1][t.uuid]
+        self.assertEqual(env["e"], "Task2")
+
     def test_sync_once_roundtrip(self):
         task = Task(uuid=config.new_id(), title="hello", destination=models.DEST_ANYTIME)
         self.store.add_task(task)
