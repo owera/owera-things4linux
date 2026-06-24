@@ -18,6 +18,7 @@ libadwaita.
   Someday, Logbook, Trash**.
 - **Areas → Projects → To-Dos** hierarchy in the sidebar.
 - Create / edit / complete / trash to-dos; notes, a "When" date, and a deadline.
+- **Empty Trash** to permanently delete trashed items (syncs the deletion).
 - **Offline-first**: a local SQLite database is the source of truth; the app is
   fully usable with no network and reconciles when it reconnects.
 - **Two-way Things Cloud sync** running in the background.
@@ -53,6 +54,9 @@ GTK UI  ⇄  db.store (SQLite, source of truth)  ⇄  sync.engine  ⇄  Things C
 - **Write:** `POST /version/1/history/{key}/commit?ancestor-index=H` where `H` is
   your current head. A **create must send the *complete* object** — a partial
   `NewBody` is silently orphaned by the server; edits send only changed fields.
+- **Delete:** trashing is an edit that sets `tr=true`; *permanent* deletion
+  (Empty Trash) is a commit with op `t=2` and an empty payload `{}` on the same
+  entity — Things Cloud uses no separate tombstone entity.
 - **Entity generations:** Things tags entities with a generation number
   (`Task`/`Task2`/`Task6`, `Tag`/`Tag2`/`Tag3`, `Area`/`Area2`) that varies by
   account/app version. We classify by stripping the trailing digits, and **learn

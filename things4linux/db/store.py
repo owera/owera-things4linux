@@ -211,6 +211,26 @@ class Store:
     def trash_task(self, uuid: str) -> None:
         self.update_task(uuid, {"trashed": True})
 
+    def empty_trash(self) -> int:
+        """Permanently delete every trashed task. Returns the number removed.
+
+        Each deletion is queued as an op=2 (DELETE) change for the sync engine and
+        the local rows are removed immediately.
+        """
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT uuid FROM task WHERE trashed = 1"
+            ).fetchall()
+            for r in rows:
+                uuid = r["uuid"]
+                self._enqueue(uuid, "task", 2, {})
+                self._conn.execute("DELETE FROM task WHERE uuid = ?", (uuid,))
+                self._conn.execute(
+                    "DELETE FROM task_tag WHERE task_uuid = ?", (uuid,)
+                )
+            self._conn.commit()
+        return len(rows)
+
     def add_area(self, area: Area) -> Area:
         fields = {"title": area.title, "index": area.index, "trashed": area.trashed}
         with self._lock:

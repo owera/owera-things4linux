@@ -90,6 +90,34 @@ class EngineTest(unittest.TestCase):
         env = self.cloud.history[-1][t.uuid]
         self.assertEqual(env["e"], "Task2")
 
+    def test_empty_trash_pushes_deletes(self):
+        # two trashed tasks (applied as remote so they aren't dirty)
+        u1, u2 = config.new_id(), config.new_id()
+        self.store.apply_remote("task", u1, 0, {"title": "a", "trashed": True})
+        self.store.apply_remote("task", u2, 0, {"title": "b", "trashed": True})
+        n = self.store.empty_trash()
+        self.assertEqual(n, 2)
+        self.assertEqual(self.store.trash(), [])  # gone locally
+        self.engine.push()
+        # both pushed as op=2 deletes with empty payloads
+        last = self.cloud.history[-2:]
+        for entry in last:
+            (env,) = entry.values()
+            self.assertEqual(env["t"], int(serde.Op.DELETE))
+            self.assertEqual(env["p"], {})
+
+    def test_create_then_delete_coalesces_to_nothing(self):
+        t = Task(uuid=config.new_id(), title="ephemeral")
+        self.store.add_task(t)          # op 0 queued
+        self.store.empty_trash()        # nothing trashed yet -> no-op
+        self.store.trash_task(t.uuid)   # op 1 (trashed=True) queued
+        self.store.empty_trash()        # now trashed -> op 2 queued + row removed
+        before = len(self.cloud.history)
+        self.engine.push()
+        # created+deleted before any sync: server sees nothing, queue still drained
+        self.assertEqual(len(self.cloud.history), before)
+        self.assertEqual(self.store.pending_changes(), [])
+
     def test_sync_once_roundtrip(self):
         task = Task(uuid=config.new_id(), title="hello", destination=models.DEST_ANYTIME)
         self.store.add_task(task)

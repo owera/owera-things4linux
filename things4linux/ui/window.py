@@ -61,6 +61,11 @@ class MainWindow(Adw.ApplicationWindow):
         refresh_btn = Gtk.Button(icon_name="view-refresh-symbolic", tooltip_text="Sync now")
         refresh_btn.connect("clicked", lambda *_: self.engine.trigger())
         header.pack_end(refresh_btn)
+        self.empty_btn = Gtk.Button(label="Empty Trash")
+        self.empty_btn.add_css_class("destructive-action")
+        self.empty_btn.set_visible(False)
+        self.empty_btn.connect("clicked", lambda *_: self._confirm_empty_trash())
+        header.pack_end(self.empty_btn)
         content_tv.add_top_bar(header)
 
         self.banner = Adw.Banner()
@@ -132,9 +137,12 @@ class MainWindow(Adw.ApplicationWindow):
         kind, ref = self.current
         self.add_btn.set_visible(not (kind == "builtin" and ref in ("logbook", "trash")))
 
+        tasks = self._query_current()
+        self.empty_btn.set_visible(self.current == ("builtin", "trash") and bool(tasks))
+
         self._clear_list()
         tag_map = self.store.tag_map()
-        for task in self._query_current():
+        for task in tasks:
             self.listbox.append(
                 TaskRow(task, self._on_toggle, self.open_task, tag_map)
             )
@@ -179,6 +187,26 @@ class MainWindow(Adw.ApplicationWindow):
         self.engine.trigger()
         self.refresh()
         self.open_task(task)
+
+    def _confirm_empty_trash(self) -> None:
+        dialog = Adw.AlertDialog(
+            heading="Empty Trash?",
+            body="This permanently deletes the items in Trash. This can’t be undone.",
+        )
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("empty", "Empty Trash")
+        dialog.set_response_appearance("empty", Adw.ResponseAppearance.DESTRUCTIVE)
+        dialog.set_default_response("cancel")
+        dialog.set_close_response("cancel")
+        dialog.connect("response", self._on_empty_response)
+        dialog.present(self)
+
+    def _on_empty_response(self, _dialog: Adw.AlertDialog, response: str) -> None:
+        if response != "empty":
+            return
+        self.store.empty_trash()
+        self.engine.trigger()
+        self.refresh()
 
     def open_task(self, task: Task) -> None:
         dialog = TaskDialog(self.store, task, self._after_edit)

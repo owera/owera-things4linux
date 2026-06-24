@@ -186,7 +186,9 @@ class SyncEngine:
         fields = item["fields"]
         default = _WRITE_ENTITY.get(kind, serde.TASK_KIND)
         entity = self.store.write_entity(kind, default)
-        if kind == "task":
+        if op == int(serde.Op.DELETE):
+            payload: dict[str, Any] = {}  # permanent delete carries an empty payload
+        elif kind == "task":
             payload = serde.encode_task(fields, partial=(op != 0))
         elif kind == "area":
             payload = serde.encode_simple(fields, serde._AREA_FIELDS_INV)
@@ -198,27 +200,40 @@ class SyncEngine:
 
 
 def _coalesce(pending: list) -> tuple[dict[str, dict], list[int], list[str]]:
-    """Collapse multiple queued changes for the same uuid into one envelope.
+    """Collapse the queued changes for each uuid into at most one envelope.
 
-    A ``NEW`` followed by ``EDIT``s becomes a single ``NEW`` with merged fields;
-    a run of ``EDIT``s becomes one ``EDIT`` (last value wins per field).
+    Rules, given the set of ops queued for a uuid:
+    * ``NEW`` + ``DELETE`` (created and deleted before any sync) -> emit nothing;
+    * any ``DELETE`` -> a single ``DELETE`` (empty payload);
+    * any ``NEW`` -> a single ``NEW`` with all fields merged (a create);
+    * otherwise -> a single ``EDIT`` (last value wins per field).
+
+    ``seqs``/``uuids`` cover *every* drained row so the queue is fully cleared,
+    even for uuids whose net effect is a no-op.
     """
     import json
 
-    merged: dict[str, dict] = {}
+    acc: dict[str, dict] = {}
     seqs: list[int] = []
     uuids: list[str] = []
     for row in pending:
         seqs.append(row["seq"])
         uuid = row["uuid"]
         uuids.append(uuid)
-        fields = json.loads(row["fields"])
-        if uuid not in merged:
-            merged[uuid] = {"kind": row["kind"], "op": row["op"], "fields": dict(fields)}
+        entry = acc.setdefault(uuid, {"kind": row["kind"], "ops": set(), "fields": {}})
+        entry["ops"].add(int(row["op"]))
+        entry["fields"].update(json.loads(row["fields"]))
+
+    merged: dict[str, dict] = {}
+    for uuid, entry in acc.items():
+        ops = entry["ops"]
+        if int(serde.Op.DELETE) in ops and int(serde.Op.NEW) in ops:
+            continue  # net no-op: created then deleted locally before syncing
+        if int(serde.Op.DELETE) in ops:
+            op = int(serde.Op.DELETE)
+        elif int(serde.Op.NEW) in ops:
+            op = int(serde.Op.NEW)
         else:
-            cur = merged[uuid]
-            cur["fields"].update(fields)
-            # NEW dominates: once a create is queued, keep emitting a create.
-            if cur["op"] != serde.Op.NEW:
-                cur["op"] = row["op"]
+            op = int(serde.Op.EDIT)
+        merged[uuid] = {"kind": entry["kind"], "op": op, "fields": entry["fields"]}
     return merged, seqs, uuids
