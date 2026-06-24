@@ -8,14 +8,14 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, GLib, Gtk  # noqa: E402
 
-from .. import config  # noqa: E402
+from .. import config, views  # noqa: E402
 from ..db import models  # noqa: E402
 from ..db.models import Task  # noqa: E402
 from ..db.store import Store  # noqa: E402
 from ..sync.engine import SyncEngine  # noqa: E402
 from .sidebar import Sidebar  # noqa: E402
 from .taskdetail import TaskDialog, today_midnight  # noqa: E402
-from .widgets import TaskRow  # noqa: E402
+from .widgets import SectionRow, TaskRow  # noqa: E402
 
 # title + which Store method backs each built-in view
 _BUILTIN = {
@@ -141,11 +141,35 @@ class MainWindow(Adw.ApplicationWindow):
         self.empty_btn.set_visible(self.current == ("builtin", "trash") and bool(tasks))
 
         self._clear_list()
-        tag_map = self.store.tag_map()
-        for task in tasks:
-            self.listbox.append(
-                TaskRow(task, self._on_toggle, self.open_task, tag_map)
-            )
+        self._tag_map = self.store.tag_map()
+        kind, ref = self.current
+        if kind == "builtin" and ref == "today":
+            self._populate_today(tasks)
+        elif kind == "builtin" and ref == "upcoming":
+            self._populate_upcoming(tasks)
+        else:
+            for task in tasks:
+                self._append_task(task)
+
+    def _append_task(self, task: Task) -> None:
+        self.listbox.append(
+            TaskRow(task, self._on_toggle, self.open_task, self._tag_map)
+        )
+
+    def _populate_today(self, tasks: list[Task]) -> None:
+        day, evening = views.split_today(tasks)
+        for task in day:
+            self._append_task(task)
+        if evening:
+            self.listbox.append(SectionRow("This Evening", "weather-clear-night-symbolic"))
+            for task in evening:
+                self._append_task(task)
+
+    def _populate_upcoming(self, tasks: list[Task]) -> None:
+        for header, group in views.group_upcoming(tasks):
+            self.listbox.append(SectionRow(header))
+            for task in group:
+                self._append_task(task)
 
     def _clear_list(self) -> None:
         child = self.listbox.get_first_child()

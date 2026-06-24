@@ -32,6 +32,15 @@
     opacity: 0.45;
 }
 
+.t4l-section-label {
+    font-weight: 700;
+    opacity: 0.55;
+    font-size: 0.95em;
+}
+.t4l-section image {
+    opacity: 0.55;
+}
+
 .t4l-tag-chip {
     background: alpha(@t4l_accent, 0.12);
     color: @t4l_accent;

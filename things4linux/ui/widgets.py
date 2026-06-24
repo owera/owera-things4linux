@@ -20,6 +20,27 @@ def _format_date(epoch: int | None) -> str:
     return time.strftime("%-d %b", time.localtime(epoch))
 
 
+class SectionRow(Gtk.ListBoxRow):
+    """A non-interactive header dividing a list (e.g. 'This Evening', a date)."""
+
+    def __init__(self, title: str, icon: str | None = None):
+        super().__init__()
+        self.set_selectable(False)
+        self.set_activatable(False)
+        self.add_css_class("t4l-section")
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        box.set_margin_top(14)
+        box.set_margin_bottom(4)
+        box.set_margin_start(12)
+        box.set_margin_end(12)
+        if icon:
+            box.append(Gtk.Image.new_from_icon_name(icon))
+        label = Gtk.Label(label=title, xalign=0)
+        label.add_css_class("t4l-section-label")
+        box.append(label)
+        self.set_child(box)
+
+
 class TaskRow(Gtk.ListBoxRow):
     """A single to-do: round check button, title, and an optional deadline tag."""
 
