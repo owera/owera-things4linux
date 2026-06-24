@@ -72,15 +72,20 @@ class Things4LinuxApplication(Adw.Application):
             )
 
     def _load_css(self) -> None:
-        if not _CSS.exists():
+        display = Gdk.Display.get_default()
+        if display is None:
             return
-        provider = Gtk.CssProvider()
-        provider.load_from_path(str(_CSS))
-        Gtk.StyleContext.add_provider_for_display(
-            Gdk.Display.get_default(),
-            provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
-        )
+        if _CSS.exists():
+            provider = Gtk.CssProvider()
+            provider.load_from_path(str(_CSS))
+            Gtk.StyleContext.add_provider_for_display(
+                display, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            )
+        # When running from a source checkout the icon lives under data/icons;
+        # an installed/Flatpak build puts it on the standard hicolor path already.
+        icons = Path(__file__).resolve().parent.parent / "data" / "icons"
+        if icons.exists():
+            Gtk.IconTheme.get_for_display(display).add_search_path(str(icons))
 
     def do_shutdown(self) -> None:
         if self.engine:

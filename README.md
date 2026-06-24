@@ -118,6 +118,21 @@ On first launch you'll be asked for your Things Cloud email and password. They
 are used once to fetch your account's sync key; afterwards sync uses the key, not
 your password.
 
+### Flatpak
+
+A manifest is provided under `build-aux/`:
+
+```bash
+flatpak install flathub org.gnome.Platform//47 org.gnome.Sdk//47
+flatpak-builder --user --install --force-clean build \
+    build-aux/io.github.things4linux.Things4Linux.yaml
+flatpak run io.github.things4linux.Things4Linux
+```
+
+It bundles httpx (pinned wheels in `build-aux/python3-httpx.json`) and installs
+the desktop entry, icon and AppStream metainfo. The sandbox is granted network
+access (for sync) and `org.freedesktop.secrets` (for the keyring).
+
 ## Safety
 
 - **Test with a secondary account first.** This is reverse-engineered software

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.things4linux.Things4Linux</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+
+  <name>Things4Linux</name>
+  <summary>A Things 3 clone that syncs with Things Cloud</summary>
+
+  <description>
+    <p>
+      Things4Linux is a native Linux to-do app, modelled on Cultured Code's
+      Things 3, that synchronises two-way with your existing Things Cloud
+      account. It is built with GTK4 and libadwaita and works offline-first.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>The built-in lists: Inbox, Today (with This Evening), Upcoming, Anytime, Someday, Logbook and Trash</li>
+      <li>Areas, Projects and To-Dos with notes, a "When" date and a deadline</li>
+      <li>Tags, with a sidebar filter</li>
+      <li>Quick Find search and keyboard shortcuts</li>
+      <li>Two-way Things Cloud synchronisation</li>
+    </ul>
+    <p>
+      Things4Linux is unofficial and not affiliated with Cultured Code; it uses
+      a community reverse-engineered protocol.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.things4linux.Things4Linux.desktop</launchable>
+
+  <url type="homepage">https://github.com/things4linux/things4linux</url>
+  <url type="bugtracker">https://github.com/things4linux/things4linux/issues</url>
+
+  <developer id="io.github.things4linux">
+    <name>Things4Linux contributors</name>
+  </developer>
+
+  <content_rating type="oars-1.1"/>
+
+  <categories>
+    <category>Office</category>
+    <category>ProjectManagement</category>
+  </categories>
+
+  <keywords>
+    <keyword>todo</keyword>
+    <keyword>tasks</keyword>
+    <keyword>things</keyword>
+    <keyword>gtd</keyword>
+  </keywords>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>The Today view with the three-pane layout</caption>
+      <image>https://raw.githubusercontent.com/things4linux/things4linux/main/data/screenshots/today.png</image>
+    </screenshot>
+  </screenshots>
+
+  <releases>
+    <release version="0.1.0" date="2026-06-24">
+      <description>
+        <p>First release: built-in lists, areas/projects/to-dos, tags, Quick Find, and two-way Things Cloud sync.</p>
+      </description>
+    </release>
+  </releases>
+</component>
