@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>io.github.things4linux.Things4Linux</id>
+  <id>com.owera.Things4Linux</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
 
-  <name>Things4Linux</name>
+  <name>Owera Things4Linux</name>
   <summary>A Things 3 clone that syncs with Things Cloud</summary>
 
   <description>
     <p>
-      Things4Linux is a native Linux to-do app, modelled on Cultured Code's
+      Owera Things4Linux is a native Linux to-do app, modelled on Cultured Code's
       Things 3, that synchronises two-way with your existing Things Cloud
       account. It is built with GTK4 and libadwaita and works offline-first.
     </p>
@@ -22,18 +22,18 @@
       <li>Two-way Things Cloud synchronisation</li>
     </ul>
     <p>
-      Things4Linux is unofficial and not affiliated with Cultured Code; it uses
+      Owera Things4Linux is unofficial and not affiliated with Cultured Code; it uses
       a community reverse-engineered protocol.
     </p>
   </description>
 
-  <launchable type="desktop-id">io.github.things4linux.Things4Linux.desktop</launchable>
+  <launchable type="desktop-id">com.owera.Things4Linux.desktop</launchable>
 
   <url type="homepage">https://github.com/things4linux/things4linux</url>
   <url type="bugtracker">https://github.com/things4linux/things4linux/issues</url>
 
-  <developer id="io.github.things4linux">
-    <name>Things4Linux contributors</name>
+  <developer id="com.owera">
+    <name>Owera</name>
   </developer>
 
   <content_rating type="oars-1.1"/>

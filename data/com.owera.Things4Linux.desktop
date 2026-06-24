@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
-Name=Things4Linux
+Name=Owera Things4Linux
 Comment=A Things 3 clone that syncs with Things Cloud
 Exec=things4linux
-Icon=io.github.things4linux.Things4Linux
+Icon=com.owera.Things4Linux
 Terminal=false
 Categories=Office;ProjectManagement;GTK;
 Keywords=todo;tasks;things;gtd;productivity;

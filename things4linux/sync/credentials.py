@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 from .. import config
 
-_SERVICE = "things4linux"
+_SERVICE = "owera-things4linux"
 _KEY = "account"
 
 try:  # optional dependency

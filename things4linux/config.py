@@ -12,8 +12,8 @@ import uuid
 from pathlib import Path
 
 APP_ID = "com.culturedcode.ThingsMac"
-APP_NAME = "Things4Linux"
-APPLICATION_ID = "io.github.things4linux.Things4Linux"
+APP_NAME = "Owera Things4Linux"
+APPLICATION_ID = "com.owera.Things4Linux"
 
 # --- Things Cloud protocol constants -------------------------------------------------
 # Base URL for the (unofficial, reverse-engineered) Things Cloud API.
@@ -33,7 +33,7 @@ SYNC_POLL_INTERVAL = 30
 def _xdg(env: str, default: str) -> Path:
     base = os.environ.get(env)
     root = Path(base) if base else Path.home() / default
-    return root / "things4linux"
+    return root / "owera-things4linux"
 
 
 def data_dir() -> Path:

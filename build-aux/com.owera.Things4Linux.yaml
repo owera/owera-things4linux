@@ -1,14 +1,14 @@
-# Flatpak manifest for Things4Linux.
+# Flatpak manifest for Owera Things4Linux.
 #
 # Build (from the repo root):
 #   flatpak install flathub org.gnome.Platform//47 org.gnome.Sdk//47
-#   flatpak-builder --user --install --force-clean build build-aux/io.github.things4linux.Things4Linux.yaml
-#   flatpak run io.github.things4linux.Things4Linux
+#   flatpak-builder --user --install --force-clean build build-aux/com.owera.Things4Linux.yaml
+#   flatpak run com.owera.Things4Linux
 #
 # The pinned Python wheels in python3-httpx.json were generated from PyPI; refresh
 # them with flatpak-pip-generator (or the helper used to create this repo) when
 # bumping httpx.
-id: io.github.things4linux.Things4Linux
+id: com.owera.Things4Linux
 runtime: org.gnome.Platform
 runtime-version: '47'
 sdk: org.gnome.Sdk
@@ -31,12 +31,12 @@ modules:
     buildsystem: simple
     build-commands:
       - pip3 install --no-index --no-build-isolation --prefix=${FLATPAK_DEST} .
-      - install -Dm644 data/io.github.things4linux.Things4Linux.desktop
-          ${FLATPAK_DEST}/share/applications/io.github.things4linux.Things4Linux.desktop
-      - install -Dm644 data/io.github.things4linux.Things4Linux.metainfo.xml
-          ${FLATPAK_DEST}/share/metainfo/io.github.things4linux.Things4Linux.metainfo.xml
-      - install -Dm644 data/icons/hicolor/scalable/apps/io.github.things4linux.Things4Linux.svg
-          ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/io.github.things4linux.Things4Linux.svg
+      - install -Dm644 data/com.owera.Things4Linux.desktop
+          ${FLATPAK_DEST}/share/applications/com.owera.Things4Linux.desktop
+      - install -Dm644 data/com.owera.Things4Linux.metainfo.xml
+          ${FLATPAK_DEST}/share/metainfo/com.owera.Things4Linux.metainfo.xml
+      - install -Dm644 data/icons/hicolor/scalable/apps/com.owera.Things4Linux.svg
+          ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/com.owera.Things4Linux.svg
     sources:
       - type: dir
         path: '..'

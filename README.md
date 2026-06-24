@@ -1,6 +1,7 @@
-# Things4Linux
+# Owera Things4Linux
 
-A native Linux desktop clone of [Things 3](https://culturedcode.com/things/) that
+Owera Things4Linux is a native Linux desktop clone of
+[Things 3](https://culturedcode.com/things/) that
 **syncs two-way with your Things Cloud account**, built with Python + GTK4 /
 libadwaita.
 
@@ -125,8 +126,8 @@ A manifest is provided under `build-aux/`:
 ```bash
 flatpak install flathub org.gnome.Platform//47 org.gnome.Sdk//47
 flatpak-builder --user --install --force-clean build \
-    build-aux/io.github.things4linux.Things4Linux.yaml
-flatpak run io.github.things4linux.Things4Linux
+    build-aux/com.owera.Things4Linux.yaml
+flatpak run com.owera.Things4Linux
 ```
 
 It bundles httpx (pinned wheels in `build-aux/python3-httpx.json`) and installs
