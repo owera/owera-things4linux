@@ -349,6 +349,14 @@ class Store:
             (project_uuid, models.STATUS_TODO),
         )
 
+    def tasks_with_tag(self, tag_uuid: str) -> list[Task]:
+        return self._tasks(
+            "trashed = 0 AND status = ? AND uuid IN "
+            "(SELECT task_uuid FROM task_tag WHERE tag_uuid = ?) "
+            "ORDER BY \"index\"",
+            (models.STATUS_TODO, tag_uuid),
+        )
+
     def area_tasks(self, area_uuid: str) -> list[Task]:
         return self._tasks(
             "trashed = 0 AND area = ? AND project IS NULL AND status = ? "

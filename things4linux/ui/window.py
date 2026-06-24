@@ -127,6 +127,8 @@ class MainWindow(Adw.ApplicationWindow):
             return self.store.area_tasks(ref)
         if kind == "project":
             return self.store.project_tasks(ref)
+        if kind == "tag":
+            return self.store.tasks_with_tag(ref)
         return []
 
     def _current_title(self) -> str:
@@ -139,6 +141,8 @@ class MainWindow(Adw.ApplicationWindow):
         if kind == "project":
             p = self.store.get_task(ref)
             return p.title if p else "Project"
+        if kind == "tag":
+            return self.store.tag_map().get(ref, "Tag")
         return ""
 
     def refresh(self) -> None:
@@ -157,9 +161,12 @@ class MainWindow(Adw.ApplicationWindow):
 
         title = self._current_title()
         self.title_label.set_text(title)
-        # add button only makes sense in actionable lists
+        # add button only makes sense in actionable lists (not logbook/trash/tag)
         kind, ref = self.current
-        self.add_btn.set_visible(not (kind == "builtin" and ref in ("logbook", "trash")))
+        self.add_btn.set_visible(
+            kind in ("area", "project")
+            or (kind == "builtin" and ref not in ("logbook", "trash"))
+        )
 
         tasks = self._query_current()
         self.empty_btn.set_visible(self.current == ("builtin", "trash") and bool(tasks))

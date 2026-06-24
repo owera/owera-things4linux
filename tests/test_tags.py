@@ -74,6 +74,23 @@ class TagTest(unittest.TestCase):
         self.assertEqual(store2.tag_map().get(work.uuid), "Work")
         store2.close()
 
+    def test_tasks_with_tag(self):
+        work = self.store.ensure_tag("Work")
+        home = self.store.ensure_tag("Home")
+        a = self._task(title="report")
+        b = self._task(title="dishes")
+        c = self._task(title="untagged")
+        self.store.set_task_tags(a.uuid, [work.uuid])
+        self.store.set_task_tags(b.uuid, [home.uuid, work.uuid])
+        self.assertEqual(
+            sorted(t.title for t in self.store.tasks_with_tag(work.uuid)),
+            ["dishes", "report"],
+        )
+        self.assertEqual([t.title for t in self.store.tasks_with_tag(home.uuid)], ["dishes"])
+        # trashed tasks drop out
+        self.store.trash_task(a.uuid)
+        self.assertEqual([t.title for t in self.store.tasks_with_tag(work.uuid)], ["dishes"])
+
     def test_move_task_into_project_clears_area(self):
         area = self.store.add_area(Area(uuid=config.new_id(), title="Work"))
         proj = self._task(title="Proj", type=models.TYPE_PROJECT, area=area.uuid)

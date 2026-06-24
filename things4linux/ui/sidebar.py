@@ -108,6 +108,14 @@ class Sidebar(Gtk.ScrolledWindow):
                 _Row("project", proj.uuid, proj.title or "Project", "view-list-symbolic")
             )
 
+        tags = self.store.tags()
+        if tags:
+            self.listbox.append(_Row("header", "", "Tags", None))
+            for tag in tags:
+                self.listbox.append(
+                    _Row("tag", tag.uuid, tag.title or "Tag", "tag-symbolic")
+                )
+
         # badges for inbox/today
         counts = self.store.counts()
         if "inbox" in self._builtin_rows:
