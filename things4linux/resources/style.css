@@ -1,0 +1,60 @@
+/* Things4Linux — light styling to evoke Things' calm, roomy aesthetic. */
+
+/* Accent used for the completion checkbox and Today star. */
+@define-color t4l_accent #1a73e8;
+
+.t4l-list {
+    background: transparent;
+    margin: 6px 12px;
+}
+
+.t4l-task-row {
+    border-radius: 8px;
+    transition: background 120ms ease;
+}
+.t4l-task-row:hover {
+    background: alpha(currentColor, 0.05);
+}
+
+/* Round-ish completion check, blue when ticked (Things signature look). */
+.t4l-check check {
+    border-radius: 50%;
+    min-width: 18px;
+    min-height: 18px;
+}
+.t4l-check:checked check {
+    background-color: @t4l_accent;
+    color: white;
+    box-shadow: none;
+}
+
+.t4l-done {
+    opacity: 0.45;
+}
+
+.t4l-deadline {
+    color: #d93025;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+/* Small count pill on Inbox / Today in the sidebar. */
+.t4l-badge {
+    color: alpha(currentColor, 0.55);
+    font-size: 0.85em;
+    font-weight: 600;
+    padding: 0 6px;
+}
+
+.t4l-empty {
+    font-size: 1.05em;
+    margin: 48px;
+}
+
+.t4l-notes {
+    padding: 6px;
+}
+
+.t4l-task-row label {
+    font-size: 1.02em;
+}

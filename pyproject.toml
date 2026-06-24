@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "things4linux"
+version = "0.1.0"
+description = "A Things 3 clone for Linux that syncs with Things Cloud"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Things4Linux contributors" }]
+keywords = ["things", "todo", "gtk", "gnome", "things-cloud"]
+
+# Runtime dependencies.
+#   - PyGObject (GTK4 + libadwaita) is provided by the system, NOT pip. On Debian/Ubuntu:
+#       sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 libadwaita-1-0
+#   - httpx is the only hard pip dependency.
+#   - keyring is optional; without it credentials fall back to a 0600 file (see sync/credentials.py).
+dependencies = [
+    "httpx>=0.24",
+]
+
+[project.optional-dependencies]
+keyring = ["keyring>=24"]
+dev = ["ruff"]
+
+[project.scripts]
+things4linux = "things4linux.app:main"
+
+[project.urls]
+Homepage = "https://github.com/things4linux/things4linux"
+
+[tool.setuptools.packages.find]
+include = ["things4linux*"]
+
+[tool.setuptools.package-data]
+things4linux = ["resources/*.css", "db/*.sql"]

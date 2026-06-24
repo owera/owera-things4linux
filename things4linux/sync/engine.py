@@ -1,0 +1,214 @@
+"""Background synchronisation engine.
+
+Runs on its own daemon thread and reconciles the local :class:`Store` with Things
+Cloud:
+
+* **pull** — fetch new history items from ``head_index`` and apply them locally,
+  advancing ``head_index``;
+* **push** — drain the local ``change_queue``, coalesce per item, and ``/commit``
+  the batch at ``ancestor-index = head_index``.
+
+The engine owns no GTK state. It reports progress through two callbacks
+(``on_changed`` / ``on_status``) which the UI wraps with ``GLib.idle_add`` so they
+land on the main loop.
+"""
+
+from __future__ import annotations
+
+import threading
+from typing import Any, Callable
+
+from .. import config
+from ..db import models
+from ..db.store import Store
+from . import serde
+from .protocol import AuthError, ThingsClient, ThingsCloudError
+
+StatusCb = Callable[[str, str], None]
+ChangedCb = Callable[[], None]
+
+# entity kind written for each internal category
+_WRITE_ENTITY = {
+    "task": serde.TASK_KIND,
+    "area": serde.AREA_KIND,
+    "tag": serde.TAG_KIND,
+    "checklist": serde.CHECKLIST_KIND,
+}
+
+
+class SyncEngine:
+    def __init__(
+        self,
+        store: Store,
+        *,
+        on_changed: ChangedCb | None = None,
+        on_status: StatusCb | None = None,
+        client: ThingsClient | None = None,
+    ):
+        self.store = store
+        self._client = client or ThingsClient()
+        self._on_changed = on_changed or (lambda: None)
+        self._on_status = on_status or (lambda state, detail: None)
+        self._stop = threading.Event()
+        self._wake = threading.Event()
+        self._thread: threading.Thread | None = None
+        self._history_key = store.get_history_key()
+
+    # -- setup ------------------------------------------------------------------------
+    def configure(self, email: str, password: str) -> str:
+        """Log in, persist the history key, and return it. Raises on failure."""
+        account = self._client.login(email, password)
+        self._history_key = account.history_key
+        self.store.set_history_key(account.history_key)
+        return account.history_key
+
+    @property
+    def configured(self) -> bool:
+        return bool(self._history_key)
+
+    def set_callbacks(self, on_changed: ChangedCb, on_status: StatusCb) -> None:
+        self._on_changed = on_changed
+        self._on_status = on_status
+
+    def adopt_history_key(self, key: str) -> None:
+        """Use a history key obtained elsewhere (e.g. saved credentials)."""
+        self._history_key = key
+        self.store.set_history_key(key)
+
+    # -- thread control ---------------------------------------------------------------
+    def start(self) -> None:
+        if self._thread and self._thread.is_alive():
+            return
+        self._stop.clear()
+        self._thread = threading.Thread(target=self._run, name="sync", daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        self._wake.set()
+        if self._thread:
+            self._thread.join(timeout=5)
+
+    def trigger(self) -> None:
+        """Ask the engine to sync now (e.g. after a local edit)."""
+        self._wake.set()
+
+    def _run(self) -> None:
+        while not self._stop.is_set():
+            try:
+                self.sync_once()
+                self._on_status("online", "")
+            except AuthError as exc:
+                self._on_status("auth-error", str(exc))
+            except ThingsCloudError as exc:
+                self._on_status("offline", str(exc))
+            except Exception as exc:  # never kill the thread
+                self._on_status("error", repr(exc))
+            self._wake.wait(timeout=config.SYNC_POLL_INTERVAL)
+            self._wake.clear()
+
+    # -- one cycle --------------------------------------------------------------------
+    def sync_once(self) -> None:
+        if not self._history_key:
+            return
+        applied = self.pull()
+        pushed = self.push()
+        if applied or pushed:
+            self._on_changed()
+
+    # -- pull -------------------------------------------------------------------------
+    def pull(self) -> bool:
+        """Pull and apply remote items until caught up. Returns True if any applied."""
+        assert self._history_key
+        applied = False
+        while True:
+            head = self.store.get_head_index()
+            sl = self._client.pull(self._history_key, head)
+            if not sl.items:
+                # No new content. ``end_index`` may still advance the marker.
+                if sl.end_index > head:
+                    self.store.set_head_index(sl.end_index)
+                break
+            for entry in sl.items:
+                self._apply_entry(entry)
+                applied = True
+            self.store.set_head_index(sl.end_index)
+            if sl.end_index <= head:  # safety against non-advancing server
+                break
+        return applied
+
+    def _apply_entry(self, entry: dict[str, Any]) -> None:
+        for uuid, env in entry.items():
+            entity = env.get("e", "")
+            kind = serde.classify(entity)
+            if kind == "other":
+                continue
+            decoded = serde.decode_item(entity, env.get("p", {}))
+            self.store.apply_remote(kind, uuid, int(env.get("t", 1)), decoded)
+
+    # -- push -------------------------------------------------------------------------
+    def push(self) -> bool:
+        """Commit queued local changes. Returns True if anything was pushed."""
+        assert self._history_key
+        pending = self.store.pending_changes()
+        if not pending:
+            return False
+
+        merged, seqs, uuids = _coalesce(pending)
+        body = {uuid: self._encode(item) for uuid, item in merged.items()}
+
+        head = self.store.get_head_index()
+        try:
+            new_head = self._client.commit(self._history_key, head, body)
+        except ThingsCloudError:
+            # Likely a stale ancestor index: pull to catch up, then retry once.
+            self.pull()
+            head = self.store.get_head_index()
+            new_head = self._client.commit(self._history_key, head, body)
+
+        self.store.set_head_index(new_head)
+        self.store.clear_changes(seqs, uuids)
+        return True
+
+    @staticmethod
+    def _encode(item: dict[str, Any]) -> dict[str, Any]:
+        kind = item["kind"]
+        op = item["op"]
+        fields = item["fields"]
+        entity = _WRITE_ENTITY.get(kind, serde.TASK_KIND)
+        if kind == "task":
+            payload = serde.encode_task(fields, partial=(op != 0))
+        elif kind == "area":
+            payload = serde.encode_simple(fields, serde._AREA_FIELDS_INV)
+        elif kind == "tag":
+            payload = serde.encode_simple(fields, serde._TAG_FIELDS_INV)
+        else:
+            payload = fields
+        return serde.make_envelope(serde.Op(op), entity, payload)
+
+
+def _coalesce(pending: list) -> tuple[dict[str, dict], list[int], list[str]]:
+    """Collapse multiple queued changes for the same uuid into one envelope.
+
+    A ``NEW`` followed by ``EDIT``s becomes a single ``NEW`` with merged fields;
+    a run of ``EDIT``s becomes one ``EDIT`` (last value wins per field).
+    """
+    import json
+
+    merged: dict[str, dict] = {}
+    seqs: list[int] = []
+    uuids: list[str] = []
+    for row in pending:
+        seqs.append(row["seq"])
+        uuid = row["uuid"]
+        uuids.append(uuid)
+        fields = json.loads(row["fields"])
+        if uuid not in merged:
+            merged[uuid] = {"kind": row["kind"], "op": row["op"], "fields": dict(fields)}
+        else:
+            cur = merged[uuid]
+            cur["fields"].update(fields)
+            # NEW dominates: once a create is queued, keep emitting a create.
+            if cur["op"] != serde.Op.NEW:
+                cur["op"] = row["op"]
+    return merged, seqs, uuids

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Things4Linux
+Comment=A Things 3 clone that syncs with Things Cloud
+Exec=things4linux
+Icon=io.github.things4linux.Things4Linux
+Terminal=false
+Categories=Utility;GTK;Office;ProjectManagement;
+Keywords=todo;tasks;things;gtd;productivity;
+StartupNotify=true
