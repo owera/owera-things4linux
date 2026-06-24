@@ -28,10 +28,12 @@ class TaskRow(Gtk.ListBoxRow):
         task: Task,
         on_toggle: Callable[[Task, bool], None],
         on_open: Callable[[Task], None],
+        tag_map: dict[str, str] | None = None,
     ):
         super().__init__()
         self.task = task
         self._on_open = on_open
+        tag_map = tag_map or {}
         self.add_css_class("t4l-task-row")
 
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
@@ -53,6 +55,15 @@ class TaskRow(Gtk.ListBoxRow):
         if task.status != models.STATUS_TODO:
             title.add_css_class("t4l-done")
         box.append(title)
+
+        for tag_uuid in task.tags:
+            name = tag_map.get(tag_uuid)
+            if not name:
+                continue
+            chip = Gtk.Label(label=name)
+            chip.add_css_class("t4l-tag-chip")
+            chip.set_valign(Gtk.Align.CENTER)
+            box.append(chip)
 
         if task.deadline:
             tag = Gtk.Label(label=f"⚑ {_format_date(task.deadline)}")

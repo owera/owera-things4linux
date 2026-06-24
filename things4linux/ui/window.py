@@ -133,8 +133,11 @@ class MainWindow(Adw.ApplicationWindow):
         self.add_btn.set_visible(not (kind == "builtin" and ref in ("logbook", "trash")))
 
         self._clear_list()
+        tag_map = self.store.tag_map()
         for task in self._query_current():
-            self.listbox.append(TaskRow(task, self._on_toggle, self.open_task))
+            self.listbox.append(
+                TaskRow(task, self._on_toggle, self.open_task, tag_map)
+            )
 
     def _clear_list(self) -> None:
         child = self.listbox.get_first_child()

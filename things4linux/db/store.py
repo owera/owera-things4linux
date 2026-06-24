@@ -237,7 +237,25 @@ class Store:
             rows = self._conn.execute(
                 f"SELECT * FROM task WHERE {where}", params
             ).fetchall()
-        return [_row_to_task(r) for r in rows]
+            tasks = [_row_to_task(r) for r in rows]
+            self._attach_tags(tasks)
+        return tasks
+
+    def _attach_tags(self, tasks: list[Task]) -> None:
+        """Populate each task's ``tags`` (list of tag uuids) in one query."""
+        if not tasks:
+            return
+        uuids = [t.uuid for t in tasks]
+        marks = ",".join("?" for _ in uuids)
+        rows = self._conn.execute(
+            f"SELECT task_uuid, tag_uuid FROM task_tag WHERE task_uuid IN ({marks})",
+            uuids,
+        ).fetchall()
+        by_task: dict[str, list[str]] = {}
+        for r in rows:
+            by_task.setdefault(r["task_uuid"], []).append(r["tag_uuid"])
+        for t in tasks:
+            t.tags = by_task.get(t.uuid, [])
 
     def inbox(self) -> list[Task]:
         return self._tasks(
@@ -324,6 +342,47 @@ class Store:
             Tag(uuid=r["uuid"], title=r["title"], shortcut=r["shortcut"], index=r["index"])
             for r in rows
         ]
+
+    def tag_map(self) -> dict[str, str]:
+        """uuid -> title, for resolving the tag uuids stored on tasks."""
+        return {t.uuid: t.title for t in self.tags()}
+
+    def add_tag(self, tag: Tag) -> Tag:
+        fields = {"title": tag.title, "shortcut": tag.shortcut, "index": tag.index}
+        with self._lock:
+            self._upsert("tag", tag.uuid, fields, _TAG_COLUMNS)
+            self._enqueue(tag.uuid, "tag", 0, fields)
+            self._conn.commit()
+        return tag
+
+    def ensure_tag(self, title: str) -> Tag:
+        """Return the tag with this title, creating (and queuing) it if needed."""
+        title = title.strip()
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT * FROM tag WHERE title = ? COLLATE NOCASE", (title,)
+            ).fetchone()
+            if row:
+                return Tag(
+                    uuid=row["uuid"], title=row["title"],
+                    shortcut=row["shortcut"], index=row["index"],
+                )
+            count = self._conn.execute("SELECT COUNT(*) AS n FROM tag").fetchone()["n"]
+        return self.add_tag(Tag(uuid=config.new_id(), title=title, index=count))
+
+    def set_task_tags(self, task_uuid: str, tag_uuids: list[str]) -> None:
+        """Replace a task's tags and queue the edit for sync."""
+        now = time.time()
+        with self._lock:
+            self._set_tags(task_uuid, tag_uuids)
+            self._conn.execute(
+                "UPDATE task SET dirty = 1, modification_date = ? WHERE uuid = ?",
+                (now, task_uuid),
+            )
+            self._enqueue(
+                task_uuid, "task", 1, {"tags": tag_uuids, "modification_date": now}
+            )
+            self._conn.commit()
 
     def get_task(self, uuid: str) -> Task | None:
         rows = self._tasks("uuid = ?", (uuid,))

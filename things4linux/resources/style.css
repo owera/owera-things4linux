@@ -32,6 +32,15 @@
     opacity: 0.45;
 }
 
+.t4l-tag-chip {
+    background: alpha(@t4l_accent, 0.12);
+    color: @t4l_accent;
+    border-radius: 6px;
+    padding: 1px 7px;
+    font-size: 0.8em;
+    font-weight: 600;
+}
+
 .t4l-deadline {
     color: #d93025;
     font-size: 0.85em;

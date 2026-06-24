@@ -75,6 +75,23 @@ class TaskDialog(Adw.Dialog):
         frame.set_child(self.notes)
         notes_group.add(frame)
 
+        # List placement (no list / an Area / a Project)
+        place = Adw.PreferencesGroup(title="List")
+        page.add(place)
+        self.list_row = Adw.ComboRow(title="List")
+        self._list_targets = self._build_list_targets()
+        self.list_row.set_model(Gtk.StringList.new([t[0] for t in self._list_targets]))
+        self.list_row.set_selected(self._current_list_index())
+        self.list_row.connect("notify::selected", self._on_list)
+        place.add(self.list_row)
+
+        # Tags (comma-separated; applied on the row's apply button / Enter)
+        self.tags_row = Adw.EntryRow(title="Tags")
+        self.tags_row.set_show_apply_button(True)
+        self.tags_row.set_text(self._tags_text())
+        self.tags_row.connect("apply", self._on_tags)
+        place.add(self.tags_row)
+
         # Scheduling
         sched = Adw.PreferencesGroup(title="Schedule")
         page.add(sched)
@@ -116,6 +133,48 @@ class TaskDialog(Adw.Dialog):
         actions.add(box)
 
         self._loading = False
+
+    # -- list placement ---------------------------------------------------------------
+    def _build_list_targets(self) -> list[tuple]:
+        """Ordered (label, kind, ref) options for the List combo row."""
+        targets: list[tuple] = [("No List", None, None)]
+        for area in self.store.areas():
+            targets.append((f"Area · {area.title or 'Area'}", "area", area.uuid))
+        for proj in self.store.projects():
+            targets.append((f"Project · {proj.title or 'Project'}", "project", proj.uuid))
+        return targets
+
+    def _current_list_index(self) -> int:
+        for i, (_label, kind, ref) in enumerate(self._list_targets):
+            if kind == "project" and ref == self.task.project:
+                return i
+            if kind == "area" and ref == self.task.area and not self.task.project:
+                return i
+        return 0
+
+    def _on_list(self, row: Adw.ComboRow, _param) -> None:
+        _label, kind, ref = self._list_targets[row.get_selected()]
+        if kind == "project":
+            changes = {"project": ref, "area": None, "destination": models.DEST_ANYTIME}
+        elif kind == "area":
+            changes = {"area": ref, "project": None, "destination": models.DEST_ANYTIME}
+        else:
+            changes = {"area": None, "project": None}
+        self._save(changes)
+
+    # -- tags -------------------------------------------------------------------------
+    def _tags_text(self) -> str:
+        names = self.store.tag_map()
+        return ", ".join(names.get(u, "") for u in self.task.tags if names.get(u))
+
+    def _on_tags(self, row: Adw.EntryRow) -> None:
+        if self._loading:
+            return
+        wanted = [t.strip() for t in row.get_text().split(",") if t.strip()]
+        tag_uuids = [self.store.ensure_tag(name).uuid for name in wanted]
+        self.task.tags = tag_uuids
+        self.store.set_task_tags(self.task.uuid, tag_uuids)
+        self.on_changed()
 
     # -- persistence helpers ----------------------------------------------------------
     def _save(self, changes: dict) -> None:
