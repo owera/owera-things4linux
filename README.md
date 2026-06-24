@@ -1,127 +1,80 @@
+<div align="center">
+
+<img src="data/icons/hicolor/scalable/apps/com.owera.Things4Linux.svg" width="120" alt="Owera Things4Linux logo">
+
 # Owera Things4Linux
 
-Owera Things4Linux is a native Linux desktop clone of
-[Things 3](https://culturedcode.com/things/) that
-**syncs two-way with your Things Cloud account**, built with Python + GTK4 /
-libadwaita.
+### The beauty of **Things 3**, native on Linux — syncing straight to your **Things Cloud** account.
 
-> ⚠️ **Unofficial.** Things Cloud has no public API. Things4Linux talks to it
-> using a community-**reverse-engineered** protocol. It is not affiliated with or
-> endorsed by Cultured Code, may break when the service changes, and could carry
-> some account/ToS risk. **Use a secondary Things Cloud account while evaluating,
-> and keep a backup.** See [Safety](#safety).
+[![License: MIT](https://img.shields.io/badge/License-MIT-1a73e8.svg)](#-license)
+![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776ab?logo=python&logoColor=white)
+![GTK4](https://img.shields.io/badge/GTK-4-4a86cf?logo=gnome&logoColor=white)
+![libadwaita](https://img.shields.io/badge/libadwaita-1.x-7c3aed)
+![Linux](https://img.shields.io/badge/Linux-desktop-333?logo=linux&logoColor=white)
+![Status: unofficial](https://img.shields.io/badge/Things%20Cloud-unofficial-e8710a)
 
-![three-pane layout: sidebar of lists + areas, task list, task editor]
+<img src="data/screenshots/hero-dark.png" width="820" alt="Owera Things4Linux — Today view (dark)">
 
-## Features (MVP)
+</div>
 
-- Built-in lists: **Inbox, Today** (with *This Evening*), **Upcoming, Anytime,
-  Someday, Logbook, Trash**.
-- **Areas → Projects → To-Dos** hierarchy in the sidebar.
-- Create / edit / complete / trash to-dos; notes, a "When" date, and a deadline.
-- **Empty Trash** to permanently delete trashed items (syncs the deletion).
-- **Offline-first**: a local SQLite database is the source of truth; the app is
-  fully usable with no network and reconciles when it reconnects.
-- **Two-way Things Cloud sync** running in the background.
+> [!WARNING]
+> **Unofficial.** Things Cloud has no public API — this talks to it through a
+> community-**reverse-engineered** protocol. It isn't affiliated with or endorsed
+> by Cultured Code and could carry some account/ToS risk. **Try it with a
+> secondary account first and keep a backup.** See [Safety](#-safety).
 
-Planned next: tags, checklists, project headings, repeating to-dos, reminders,
-drag-and-drop reordering, and a global Quick Entry hotkey.
+---
 
-## Keyboard shortcuts
+## ✨ See it in action
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+N` | New to-do (in the current list) |
-| `Ctrl+F` | Quick Find |
-| `Ctrl+R` | Sync now |
-| `Ctrl+1`…`Ctrl+7` | Jump to Inbox / Today / Upcoming / Anytime / Someday / Logbook / Trash |
-| `Ctrl+W` | Close window · `F1` About |
+<div align="center">
+<img src="data/screenshots/demo.gif" width="760" alt="Owera Things4Linux demo">
+</div>
 
-A primary menu (☰) in the header exposes New To-Do, Quick Find, Sync Now and About.
+<table>
+  <tr>
+    <td width="50%"><img src="data/screenshots/today.png" alt="Today"><br><sub><b>Today</b> — daytime + This Evening, tags, deadlines</sub></td>
+    <td width="50%"><img src="data/screenshots/project.png" alt="Project"><br><sub><b>Projects</b> grouped under Areas in the sidebar</sub></td>
+  </tr>
+  <tr>
+    <td><img src="data/screenshots/tags.png" alt="Tags"><br><sub><b>Tags</b> — click one to filter your to-dos</sub></td>
+    <td><img src="data/screenshots/quick-find.png" alt="Quick Find"><br><sub><b>Quick Find</b> — fuzzy search everything</sub></td>
+  </tr>
+</table>
 
-## How it works
+## 🎯 Features
 
-```
-GTK UI  ⇄  db.store (SQLite, source of truth)  ⇄  sync.engine  ⇄  Things Cloud
-```
+**📥 Lists & views**
+- The full set of built-in lists: **Inbox · Today · Upcoming · Anytime · Someday · Logbook · Trash**
+- **This Evening** split in Today, and **Upcoming** grouped by day (Tomorrow, weekday, date)
 
-- `things4linux/sync/protocol.py` — the Things Cloud HTTP client (login →
-  `history-key`, pull history items by `start-index`, push via `/commit`).
-- `things4linux/sync/serde.py` — translates Things' cryptic two-letter wire
-  fields (`tt`=title, `ss`=status, `st`=destination, `sr`=when, `dd`=deadline …)
-  to/from our model.
-- `things4linux/db/store.py` — local store + the queries behind each list.
-- `things4linux/sync/engine.py` — background pull/push loop reconciled through a
-  monotonic history index.
+**🗂️ Organise**
+- **Areas → Projects → To-Dos**, with notes, a "When" date and a deadline
+- **Tags** with a one-click sidebar filter
+- **Empty Trash** to permanently delete (and sync the deletion)
 
-### Protocol notes (verified against a live account)
+**🔎 Find & fly**
+- **Quick Find** fuzzy search across every to-do
+- **Keyboard shortcuts** for everything (see below)
 
-- **Auth:** `GET /version/1/account/{email}` with header
-  `Authorization: Password <url-quoted-password>` (the password is *not* wrapped
-  in quotes). Returns the `history-key`.
-- **Read:** `GET /version/1/history/{key}/items?start-index=N`. A pull from `0`
-  returns a *compacted base snapshot*; you receive newer writes by pulling
-  **incrementally from your last head** (`current-item-index`). The engine keeps a
-  persistent head and always pulls forward, so a synced client reliably sees all
-  remote changes.
-- **Write:** `POST /version/1/history/{key}/commit?ancestor-index=H` where `H` is
-  your current head. A **create must send the *complete* object** — a partial
-  `NewBody` is silently orphaned by the server; edits send only changed fields.
-- **Delete:** trashing is an edit that sets `tr=true`; *permanent* deletion
-  (Empty Trash) is a commit with op `t=2` and an empty payload `{}` on the same
-  entity — Things Cloud uses no separate tombstone entity.
-- **Entity generations:** Things tags entities with a generation number
-  (`Task`/`Task2`/`Task6`, `Tag`/`Tag2`/`Tag3`, `Area`/`Area2`) that varies by
-  account/app version. We classify by stripping the trailing digits, and **learn
-  which generation to write** from your own history so the official apps accept
-  our writes.
+**☁️ Sync**
+- **Two-way Things Cloud sync** in the background
+- **Offline-first** — a local SQLite store is the source of truth; the app stays
+  fully usable with no network and reconciles when it reconnects
 
-## Requirements
+## ⌨️ Keyboard shortcuts
 
-System packages (the GTK stack is **not** installed from pip):
+| Shortcut | Action | | Shortcut | Action |
+|---|---|---|---|---|
+| `Ctrl`+`N` | New to-do | | `Ctrl`+`1`…`7` | Jump to a list |
+| `Ctrl`+`F` | Quick Find | | `Ctrl`+`W` | Close window |
+| `Ctrl`+`R` | Sync now | | `F1` | About |
 
-```bash
-# Debian / Ubuntu
-sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 \
-                 libgtk-4-1 libadwaita-1-0
+A primary menu (☰) in the header also exposes New To-Do, Quick Find, Sync Now and About.
 
-# Fedora
-sudo dnf install python3-gobject gtk4 libadwaita
-```
+## 🚀 Install
 
-Python packages:
-
-```bash
-pip install httpx          # required
-pip install keyring        # optional — secure credential storage (see Safety)
-```
-
-> The only hard Python dependency is **httpx**; `shortuuid`, `platformdirs`, and
-> `keyring` are intentionally avoided or optional so the app runs on a stock
-> distro Python that already ships PyGObject.
-
-## Running
-
-From a checkout:
-
-```bash
-python3 -m things4linux
-```
-
-Or install it:
-
-```bash
-pip install .
-things4linux
-```
-
-On first launch you'll be asked for your Things Cloud email and password. They
-are used once to fetch your account's sync key; afterwards sync uses the key, not
-your password.
-
-### Flatpak
-
-A manifest is provided under `build-aux/`:
+### Flatpak (recommended)
 
 ```bash
 flatpak install flathub org.gnome.Platform//47 org.gnome.Sdk//47
@@ -130,37 +83,101 @@ flatpak-builder --user --install --force-clean build \
 flatpak run com.owera.Things4Linux
 ```
 
-It bundles httpx (pinned wheels in `build-aux/python3-httpx.json`) and installs
-the desktop entry, icon and AppStream metainfo. The sandbox is granted network
-access (for sync) and `org.freedesktop.secrets` (for the keyring).
+The manifest bundles `httpx` (pinned wheels in `build-aux/python3-httpx.json`) and
+installs the desktop entry, icon and AppStream metadata. The sandbox is granted
+network access (for sync) and `org.freedesktop.secrets` (for the keyring).
 
-## Safety
+### From source
 
-- **Test with a secondary account first.** This is reverse-engineered software
-  writing to your live task data.
-- **Back up your history** before the first write — e.g. export your data from
-  the official Things app on another device.
-- **Credential storage:** if the optional `keyring` package is installed,
-  credentials go to the system secret store (GNOME Keyring / Secret Service).
-  Otherwise they fall back to `~/.config/things4linux/credentials.json` with
-  `0600` permissions — less secure; install `keyring` if that matters to you.
-- Local data lives in `~/.local/share/things4linux/things.db`. Delete it to start
-  a clean re-sync (your cloud data is untouched).
-
-## Development
+The GTK stack comes from your distro, **not** pip:
 
 ```bash
-# run the test suite (stdlib unittest — no pytest needed)
-python3 -m unittest discover -t . -s tests
+# Debian / Ubuntu
+sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 libgtk-4-1 libadwaita-1-0
+# Fedora
+sudo dnf install python3-gobject gtk4 libadwaita
 
-# headless GUI smoke test
-xvfb-run python3 -m things4linux   # needs a Things Cloud login to do anything live
+pip install httpx          # the only required Python dependency
+pip install keyring        # optional — secure credential storage
+
+python3 -m things4linux    # run it
+```
+
+On first launch you'll enter your Things Cloud email and password once — they're
+used to fetch your account's sync key; afterwards sync uses the key, not your
+password.
+
+## 🛡️ Safety
+
+- **Try a secondary account first** — this is reverse-engineered software writing
+  to your live task data.
+- **Back up** before the first write (e.g. export from the official Things app).
+- **Credentials** go to the system keyring (GNOME Keyring / Secret Service) when
+  the optional `keyring` package is installed; otherwise they fall back to
+  `~/.config/owera-things4linux/credentials.json` (`0600`).
+- Local data lives in `~/.local/share/owera-things4linux/things.db` — delete it to
+  start a clean re-sync (your cloud data is untouched).
+
+## 🧭 Roadmap
+
+Checklists · project headings · repeating to-dos · reminders · drag-and-drop
+reordering · a global Quick Entry hotkey.
+
+## 🛠️ How it works
+
+```
+GTK UI  ⇄  db.store (SQLite, source of truth)  ⇄  sync.engine  ⇄  Things Cloud
+```
+
+- `things4linux/sync/protocol.py` — the Things Cloud HTTP client (login →
+  `history-key`, pull by `start-index`, push via `/commit`).
+- `things4linux/sync/serde.py` — translates Things' cryptic two-letter wire fields
+  (`tt`=title, `ss`=status, `sr`=when, `dd`=deadline …) to/from our model.
+- `things4linux/db/store.py` — the local store and the queries behind each list.
+- `things4linux/sync/engine.py` — the background pull/push loop, reconciled through
+  a monotonic history index.
+
+<details>
+<summary><b>Protocol notes</b> (reverse-engineered, verified against a live account)</summary>
+
+- **Auth:** `GET /version/1/account/{email}` with header
+  `Authorization: Password <url-quoted-password>` (the password is *not* wrapped in
+  quotes). Returns the `history-key`.
+- **Read:** `GET /version/1/history/{key}/items?start-index=N`. A pull from `0`
+  returns a *compacted base snapshot*; newer writes arrive by pulling
+  **incrementally from your last head**. The engine keeps a persistent head and
+  always pulls forward.
+- **Write:** `POST /version/1/history/{key}/commit?ancestor-index=H`. A **create
+  must send the *complete* object** — a partial one is silently orphaned by the
+  server; edits send only changed fields.
+- **Delete:** trashing is an edit setting `tr=true`; *permanent* deletion is a
+  commit with op `t=2` and an empty payload — there is no separate tombstone entity.
+- **Entity generations:** Things tags entities with a generation number
+  (`Task`/`Task2`/`Task6`, …) that varies by account. We classify by stripping the
+  digits and **learn which generation to write** from your own history so the
+  official apps accept our writes.
+
+</details>
+
+## 👩‍💻 Development
+
+```bash
+python3 -m unittest discover -t . -s tests   # stdlib unittest, no pytest needed
+xvfb-run python3 tools/screenshots.py        # regenerate the screenshots
 ```
 
 Tests cover the serde field mapping, the store's view queries and dirty/queue
 bookkeeping, and the sync engine end-to-end against an in-memory fake of the
-Things Cloud history server (including the stale-ancestor retry path).
+Things Cloud server (including the stale-ancestor retry path).
 
-## License
+## 🙏 Acknowledgements
+
+Built on the community's reverse-engineering of Things Cloud —
+[`disrupted/things-cloud-api`](https://github.com/disrupted/things-cloud-api) and
+[`nicolai86/things-cloud-sdk`](https://github.com/nicolai86/things-cloud-sdk).
+Things and Things Cloud are products of [Cultured Code](https://culturedcode.com/);
+this project is independent and unofficial.
+
+## 📄 License
 
 MIT.

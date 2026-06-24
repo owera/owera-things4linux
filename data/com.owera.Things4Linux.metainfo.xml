@@ -52,8 +52,20 @@
 
   <screenshots>
     <screenshot type="default">
-      <caption>The Today view with the three-pane layout</caption>
-      <image>https://raw.githubusercontent.com/things4linux/things4linux/main/data/screenshots/today.png</image>
+      <caption>The Today view, with This Evening, tags and a deadline</caption>
+      <image>https://raw.githubusercontent.com/owera/owera-things4linux/master/data/screenshots/today.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>A project's to-dos</caption>
+      <image>https://raw.githubusercontent.com/owera/owera-things4linux/master/data/screenshots/project.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Filtering by a tag</caption>
+      <image>https://raw.githubusercontent.com/owera/owera-things4linux/master/data/screenshots/tags.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Quick Find search</caption>
+      <image>https://raw.githubusercontent.com/owera/owera-things4linux/master/data/screenshots/quick-find.png</image>
     </screenshot>
   </screenshots>
 
