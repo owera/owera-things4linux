@@ -39,6 +39,27 @@ class StoreTest(unittest.TestCase):
         self.assertEqual([t.title for t in self.store.today()], ["now"])
         self.assertEqual([t.title for t in self.store.upcoming()], ["later"])
 
+    def test_today_excludes_children_of_inactive_projects(self):
+        past = int(time.time()) - 86400
+        # a trashed project and a completed project
+        trashed_p = self._add(title="Trashed", type=models.TYPE_PROJECT)
+        self.store.trash_task(trashed_p.uuid)
+        done_p = self._add(title="Done", type=models.TYPE_PROJECT)
+        self.store.complete_task(done_p.uuid)
+        live_p = self._add(title="Live", type=models.TYPE_PROJECT)
+        # scheduled-today children
+        self._add(title="in-trashed", destination=models.DEST_ANYTIME,
+                  scheduled_date=past, project=trashed_p.uuid)
+        self._add(title="in-done", destination=models.DEST_ANYTIME,
+                  scheduled_date=past, project=done_p.uuid)
+        self._add(title="in-live", destination=models.DEST_ANYTIME,
+                  scheduled_date=past, project=live_p.uuid)
+        self._add(title="loose", destination=models.DEST_ANYTIME, scheduled_date=past)
+        # only the live-project child and the loose one survive
+        self.assertEqual(
+            sorted(t.title for t in self.store.today()), ["in-live", "loose"]
+        )
+
     def test_today_excludes_someday(self):
         past = int(time.time()) - 86400
         self._add(title="anytime", destination=models.DEST_ANYTIME, scheduled_date=past)

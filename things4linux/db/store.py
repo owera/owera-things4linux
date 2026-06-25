@@ -39,6 +39,17 @@ def _quote(col: str) -> str:
     return f'"{col}"' if col == "index" else col
 
 
+# A to-do is only shown in active lists (Today/Anytime/Upcoming) when its
+# container is active: its project is open and not trashed/Someday, and its area
+# isn't trashed. Things hides children of trashed/completed/Someday projects.
+_ACTIVE_CONTAINER = (
+    "AND (project IS NULL OR project IN "
+    "(SELECT uuid FROM task WHERE type = 1 AND trashed = 0 AND status = 0 "
+    "AND destination != 2)) "
+    "AND (area IS NULL OR area IN (SELECT uuid FROM area WHERE trashed = 0))"
+)
+
+
 class Store:
     def __init__(self, path: str | Path | None = None):
         self.path = str(path or config.database_path())
@@ -321,6 +332,7 @@ class Store:
         return self._tasks(
             "trashed = 0 AND status = ? AND destination = ? "
             "AND scheduled_date IS NOT NULL AND scheduled_date <= ? "
+            f"{_ACTIVE_CONTAINER} "
             "ORDER BY evening, today_index, \"index\"",
             (models.STATUS_TODO, models.DEST_ANYTIME, end),
         )
@@ -329,14 +341,14 @@ class Store:
         end = _end_of_today()
         return self._tasks(
             "trashed = 0 AND status = ? AND scheduled_date IS NOT NULL "
-            "AND scheduled_date > ? ORDER BY scheduled_date",
+            f"AND scheduled_date > ? {_ACTIVE_CONTAINER} ORDER BY scheduled_date",
             (models.STATUS_TODO, end),
         )
 
     def anytime(self) -> list[Task]:
         return self._tasks(
             "trashed = 0 AND status = ? AND destination = ? AND scheduled_date IS NULL "
-            "ORDER BY \"index\"",
+            f"{_ACTIVE_CONTAINER} ORDER BY \"index\"",
             (models.STATUS_TODO, models.DEST_ANYTIME),
         )
 
