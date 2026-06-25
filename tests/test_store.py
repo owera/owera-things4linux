@@ -39,6 +39,13 @@ class StoreTest(unittest.TestCase):
         self.assertEqual([t.title for t in self.store.today()], ["now"])
         self.assertEqual([t.title for t in self.store.upcoming()], ["later"])
 
+    def test_today_excludes_someday(self):
+        past = int(time.time()) - 86400
+        self._add(title="anytime", destination=models.DEST_ANYTIME, scheduled_date=past)
+        # Someday item carrying a leftover scheduled date must not leak into Today.
+        self._add(title="someday", destination=models.DEST_SOMEDAY, scheduled_date=past)
+        self.assertEqual([t.title for t in self.store.today()], ["anytime"])
+
     def test_complete_moves_to_logbook(self):
         t = self._add(title="done me")
         self.store.complete_task(t.uuid)

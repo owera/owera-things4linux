@@ -224,8 +224,19 @@ def decode_item(entity: str, payload: dict[str, Any]) -> dict[str, Any]:
     if kind == "tag":
         return decode_simple(payload, TAG_FIELDS)
     if kind == "checklist":
-        return decode_simple(payload, {**TASK_FIELDS, "ts": "task"})
+        return decode_checklist(payload)
     return {}
+
+
+# checklist item: tt=title, ss=status, sp=completion, ix=index, ts=parent task(s)
+CHECKLIST_FIELDS = {"ix": "index", "tt": "title", "ss": "status", "sp": "completion_date"}
+
+
+def decode_checklist(payload: dict[str, Any]) -> dict[str, Any]:
+    out = decode_simple(payload, CHECKLIST_FIELDS)
+    if "ts" in payload:
+        out["task"] = _first(payload["ts"])  # ts is a list of parent task uuids
+    return out
 
 
 def make_envelope(op: Op, entity: str, payload: dict[str, Any]) -> dict[str, Any]:

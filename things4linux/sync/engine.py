@@ -120,26 +120,45 @@ class SyncEngine:
 
     # -- pull -------------------------------------------------------------------------
     def pull(self) -> bool:
-        """Pull and apply remote items until caught up. Returns True if any applied."""
+        """Pull and apply remote items until caught up. Returns True if any applied.
+
+        The history is paged (≤2500 items per response); we advance the cursor by
+        the number of items consumed until it reaches the head, persisting it each
+        page so an interrupted sync resumes correctly.
+        """
         assert self._history_key
+        self._maybe_resync()
         applied = False
         while True:
-            head = self.store.get_head_index()
-            sl = self._client.pull(self._history_key, head)
-            if not sl.items:
-                # No new content. ``end_index`` may still advance the marker.
-                if sl.end_index > head:
-                    self.store.set_head_index(sl.end_index)
-                break
+            cursor = self.store.get_head_index()
+            sl = self._client.pull(self._history_key, cursor)
             for entry in sl.items:
                 self._apply_entry(entry)
                 applied = True
-            self.store.set_head_index(sl.end_index)
-            if sl.end_index <= head:  # safety against non-advancing server
+            advanced = cursor + len(sl.items)
+            self.store.set_head_index(advanced)
+            if not sl.items or advanced >= sl.head_index:
+                # Pin to the authoritative head (the commit ancestor-index).
+                if sl.head_index > advanced:
+                    self.store.set_head_index(sl.head_index)
                 break
         if applied:
             self._persist_learned_entities()
         return applied
+
+    def _maybe_resync(self) -> None:
+        """One-time full re-sync for installs created before paginated pull.
+
+        Only wipes a store that was *already* synced under the old (single-page)
+        code — detected by a non-zero head. A fresh store (head 0) just records the
+        flag and does its first full paged pull normally, preserving any un-pushed
+        local changes.
+        """
+        if self.store.get_meta("sync_paginated") == "1":
+            return
+        if self.store.get_head_index() > 0:
+            self.store.reset_for_full_resync()
+        self.store.set_meta("sync_paginated", "1")
 
     def _apply_entry(self, entry: dict[str, Any]) -> None:
         for uuid, env in entry.items():

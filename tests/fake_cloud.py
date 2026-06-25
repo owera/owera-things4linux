@@ -9,8 +9,9 @@ from things4linux.sync.protocol import Account, HistorySlice, ThingsCloudError
 
 
 class FakeCloud:
-    def __init__(self, history_key: str = "HK-TEST"):
+    def __init__(self, history_key: str = "HK-TEST", page_size: int = 1000):
         self.history_key = history_key
+        self.page_size = page_size  # server caps each /items response (real ≈ 2500)
         self.history: list[dict[str, Any]] = []  # each: {uuid: {t,e,p}}
         self.commits: list[dict[str, Any]] = []  # raw bodies received
 
@@ -24,11 +25,12 @@ class FakeCloud:
 
     def pull(self, history_key: str, start_index: int) -> HistorySlice:
         assert history_key == self.history_key
-        items = self.history[start_index:]
+        page = self.history[start_index : start_index + self.page_size]
         return HistorySlice(
-            items=items,
+            items=page,
             start_index=start_index,
-            end_index=len(self.history),
+            next_index=start_index + len(page),
+            head_index=len(self.history),  # the global head (current-item-index)
             schema=301,
         )
 

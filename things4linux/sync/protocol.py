@@ -41,11 +41,19 @@ class Account:
 
 @dataclass
 class HistorySlice:
-    """A slice of the remote history returned by :meth:`ThingsClient.pull`."""
+    """A page of the remote history returned by :meth:`ThingsClient.pull`.
+
+    The server returns items in pages (≤2500). ``head_index`` is the global head
+    of the history (the response's ``current-item-index``) — the same value used
+    as the commit ``ancestor-index``. ``next_index`` is where the *next* page
+    starts (this page's ``start_index`` + the number of items returned); keep
+    pulling from it until ``next_index >= head_index``.
+    """
 
     items: list[dict[str, Any]]  # each: {uuid: {t, e, p}}
     start_index: int
-    end_index: int  # becomes the next ``start-index``
+    next_index: int
+    head_index: int
     schema: int
 
 
@@ -113,10 +121,12 @@ class ThingsClient:
             "GET", url, params={"start-index": str(start_index)}, headers=_sync_headers()
         )
         data = resp.json()
+        items = data.get("items", [])
         return HistorySlice(
-            items=data.get("items", []),
+            items=items,
             start_index=start_index,
-            end_index=int(data.get("current-item-index", start_index)),
+            next_index=start_index + len(items),
+            head_index=int(data.get("current-item-index", start_index)),
             schema=int(data.get("schema", 0)),
         )
 

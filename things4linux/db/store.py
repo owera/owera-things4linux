@@ -85,6 +85,15 @@ class Store:
             )
             self._conn.commit()
 
+    def reset_for_full_resync(self) -> None:
+        """Clear cached items and rewind the head so the next pull re-fetches the
+        whole history. Keeps the history key, queued local changes and app_meta."""
+        with self._lock:
+            for table in ("task", "task_tag", "area", "tag", "checklist_item"):
+                self._conn.execute(f"DELETE FROM {table}")
+            self._conn.execute("UPDATE sync_state SET head_index = 0 WHERE id = 1")
+            self._conn.commit()
+
     # -- key/value meta ---------------------------------------------------------------
     def set_meta(self, key: str, value: str) -> None:
         with self._lock:
@@ -306,11 +315,14 @@ class Store:
         )
 
     def today(self) -> list[Task]:
+        # Today = scheduled (Anytime bucket) items whose "when" date has arrived;
+        # Someday items never appear even if they carry a leftover scheduled date.
         end = _end_of_today()
         return self._tasks(
-            "trashed = 0 AND status = ? AND scheduled_date IS NOT NULL "
-            "AND scheduled_date <= ? ORDER BY evening, today_index, \"index\"",
-            (models.STATUS_TODO, end),
+            "trashed = 0 AND status = ? AND destination = ? "
+            "AND scheduled_date IS NOT NULL AND scheduled_date <= ? "
+            "ORDER BY evening, today_index, \"index\"",
+            (models.STATUS_TODO, models.DEST_ANYTIME, end),
         )
 
     def upcoming(self) -> list[Task]:
@@ -462,6 +474,10 @@ class Store:
 def _coerce(value: Any) -> Any:
     if isinstance(value, bool):
         return 1 if value else 0
+    # Scalar columns never legitimately hold a list/dict (relations and tags are
+    # handled before upsert); guard so an unexpected shape can't crash a full sync.
+    if isinstance(value, (list, dict)):
+        return None
     return value
 
 

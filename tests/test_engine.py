@@ -75,6 +75,22 @@ class EngineTest(unittest.TestCase):
         self.assertEqual(titles, ["mine", "other device"])
         self.assertEqual(len(self.cloud.history), 2)
 
+    def test_pull_pages_through_full_history(self):
+        # History larger than one page must be fully fetched, not just page 1.
+        cloud = FakeCloud(page_size=2)
+        for i in range(5):
+            cloud.server_push(
+                config.new_id(), serde.TASK_KIND, 0,
+                serde.encode_task({"title": f"item {i}"}, partial=False),
+            )
+        store = Store(tempfile.mktemp(suffix=".db"))
+        eng = SyncEngine(store, client=cloud)
+        eng.adopt_history_key(cloud.history_key)
+        self.assertTrue(eng.pull())
+        self.assertEqual(len(store.inbox()), 5)          # across 3 pages of 2
+        self.assertEqual(store.get_head_index(), 5)      # pinned to the head
+        store.close()
+
     def test_write_entity_is_learned_from_history(self):
         # Server history uses the older "Task2" generation.
         self.cloud.server_push(
