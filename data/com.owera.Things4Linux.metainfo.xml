@@ -70,7 +70,7 @@
   </screenshots>
 
   <releases>
-    <release version="0.1.0" date="2026-06-24">
+    <release version="0.1.0" date="2026-06-25">
       <description>
         <p>First release: built-in lists, areas/projects/to-dos, tags, Quick Find, and two-way Things Cloud sync.</p>
       </description>
