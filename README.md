@@ -6,22 +6,27 @@
 
 ### A **Things-inspired** to-do app, native on Linux — syncing straight to your **Things Cloud** account.
 
+![Status: alpha](https://img.shields.io/badge/status-alpha-e8710a)
+![Experimental](https://img.shields.io/badge/experimental-yes-d93025)
 [![License: MIT](https://img.shields.io/badge/License-MIT-1a73e8.svg)](#-license)
 ![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776ab?logo=python&logoColor=white)
 ![GTK4](https://img.shields.io/badge/GTK-4-4a86cf?logo=gnome&logoColor=white)
 ![libadwaita](https://img.shields.io/badge/libadwaita-1.x-7c3aed)
 ![Linux](https://img.shields.io/badge/Linux-desktop-333?logo=linux&logoColor=white)
-![Status: unofficial](https://img.shields.io/badge/Things%20Cloud-unofficial-e8710a)
+![Things Cloud: unofficial](https://img.shields.io/badge/Things%20Cloud-unofficial-e8710a)
 
 <img src="data/screenshots/hero-dark.png" width="820" alt="Owera Things4Linux — Today view (dark)">
 
 </div>
 
 > [!WARNING]
-> **Unofficial.** Things Cloud has no public API — this talks to it through a
-> community-**reverse-engineered** protocol. It isn't affiliated with or endorsed
-> by Cultured Code and could carry some account/ToS risk. **Try it with a
-> secondary account first and keep a backup.** See [Safety](#-safety).
+> **Experimental — alpha software.** Owera Things4Linux is an early, fast-moving
+> work in progress: features are incomplete, behaviour may change, and bugs
+> (including sync issues) are expected. It's also **unofficial** — Things Cloud
+> has no public API, so this talks to it through a community-**reverse-engineered**
+> protocol. It isn't affiliated with or endorsed by Cultured Code and could carry
+> some account/ToS risk. **Try it with a secondary account first and keep a
+> backup.** See [Safety](#-safety).
 
 ---
 
