@@ -161,7 +161,7 @@ class MainWindow(Adw.ApplicationWindow):
             application_icon=config.APPLICATION_ID,
             version=__version__,
             developer_name="Owera",
-            comments="A Things 3 clone for Linux that syncs with Things Cloud.",
+            comments="A Things-inspired to-do app for Linux that syncs with Things Cloud.",
             license_type=Gtk.License.MIT_X11,
             website="https://github.com/things4linux/things4linux",
         )

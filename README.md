@@ -4,7 +4,7 @@
 
 # Owera Things4Linux
 
-### The beauty of **Things 3**, native on Linux — syncing straight to your **Things Cloud** account.
+### A **Things-inspired** to-do app, native on Linux — syncing straight to your **Things Cloud** account.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-1a73e8.svg)](#-license)
 ![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776ab?logo=python&logoColor=white)

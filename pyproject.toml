@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "things4linux"
 version = "0.1.0"
-description = "A Things 3 clone for Linux that syncs with Things Cloud"
+description = "A Things-inspired to-do app for Linux that syncs with Things Cloud"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }

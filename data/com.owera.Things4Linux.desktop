@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Owera Things4Linux
-Comment=A Things 3 clone that syncs with Things Cloud
+Comment=A Things-inspired to-do app that syncs with Things Cloud
 Exec=things4linux
 Icon=com.owera.Things4Linux
 Terminal=false

@@ -5,11 +5,11 @@
   <project_license>MIT</project_license>
 
   <name>Owera Things4Linux</name>
-  <summary>A Things 3 clone that syncs with Things Cloud</summary>
+  <summary>A Things-inspired to-do app that syncs with Things Cloud</summary>
 
   <description>
     <p>
-      Owera Things4Linux is a native Linux to-do app, modelled on Cultured Code's
+      Owera Things4Linux is a native Linux to-do app, inspired by Cultured Code's
       Things 3, that synchronises two-way with your existing Things Cloud
       account. It is built with GTK4 and libadwaita and works offline-first.
     </p>
