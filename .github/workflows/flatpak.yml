@@ -1,0 +1,49 @@
+name: Flatpak bundle
+
+# Builds a single-file .flatpak bundle and attaches it to a release.
+# Runs automatically when a release is published, and can be run manually
+# (workflow_dispatch) to attach the bundle to an existing release/tag.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to attach the bundle to"
+        required: true
+        default: v0.1.0
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  flatpak:
+    name: Build Flatpak bundle
+    runs-on: ubuntu-latest
+    container:
+      image: bilelmoussaoui/flatpak-github-actions:gnome-47
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build bundle
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: com.owera.Things4Linux.flatpak
+          manifest-path: build-aux/com.owera.Things4Linux.yaml
+          cache-key: flatpak-builder-${{ github.sha }}
+
+      - name: Resolve release tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "value=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Attach bundle to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.value }}
+          files: com.owera.Things4Linux.flatpak
